@@ -196,6 +196,25 @@
   .kp-key{background:var(--panel2);border:1px solid var(--line);border-bottom-width:3px;border-radius:8px;padding:3px 9px;font-weight:800;font-size:15px;min-width:30px;text-align:center}
   .kp-pad{color:var(--muted);font-size:12px}
   .kp-change{margin-top:14px;width:100%;background:var(--pink);border-radius:12px;padding:10px;font-weight:800}
+  .kp-tip{background:#2b2350;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.45;color:#e6defc;margin:8px 0 4px}
+  .kp-mach{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .kp-mach button{background:var(--panel2);border-radius:10px;padding:9px 6px;font-weight:800;font-size:13.5px}
+  .kp-mach button:active{transform:scale(.96)}
+  .mach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+  .mach-grid button{background:var(--panel2);border-radius:16px;padding:14px 10px;font-weight:800;font-size:16px;text-align:center}
+  .mach-grid button small{display:block;color:var(--muted);font-weight:600;font-size:12.5px;margin-top:3px}
+  .optrow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+  .optrow label{font-weight:700;font-size:15px}
+  .optrow select{background:var(--bg);color:var(--ink);border:2px solid var(--panel2);border-radius:10px;padding:8px;font:inherit;font-size:15px;max-width:55%}
+  details summary{cursor:pointer;font-weight:800;color:var(--muted);margin:14px 0 4px}
+  .finder-imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:6px 0 14px}
+  @media (max-width:520px){.finder-imgs{grid-template-columns:1fr 1fr}}
+  .finder-imgs button{background:var(--bg);border-radius:14px;padding:6px;border:3px solid transparent;display:flex;flex-direction:column;gap:6px;align-items:center}
+  .finder-imgs button:hover,.finder-imgs button:focus{border-color:var(--cyan)}
+  .finder-imgs img{width:100%;aspect-ratio:3/4;object-fit:contain;background:#000;border-radius:10px}
+  .finder-imgs span{font-size:13px;font-weight:700;color:var(--muted)}
+  .finder-imgs .miss{aspect-ratio:3/4;width:100%;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;background:#000;border-radius:10px}
+  .sheet a.weblink{color:var(--cyan);font-weight:700}
   #game{width:100%;height:100%}
   #game .ejs_menu_bar, #game .ejs_context_menu{display:none !important}
   body.no-onscreen #game .ejs_virtualGamepad_parent{display:none !important}
@@ -246,6 +265,7 @@
   <div class="topbar">
     <button class="home-link" data-go="home">⬅ Home</button>
     <h1>Game library</h1>
+    <button class="big-btn alt" id="findArtBtn">🔎 Find artwork</button>
     <button class="big-btn" data-go="add">＋ Add games</button>
   </div>
   <div id="filled" class="hidden">
@@ -335,6 +355,7 @@
     <button class="pbtn" id="pLoad">📂 Load</button>
     <button class="pbtn" id="pSound">🔊 Sound</button>
     <button class="pbtn" id="pControls">⌨️ Controls</button>
+    <button class="pbtn" id="pMachine">🛠️ Machine</button>
     <button class="pbtn" id="pFull">⛶</button>
   </div>
   <div id="game-area">
@@ -424,10 +445,24 @@ const IMG_RE = /\.(png|jpe?g|webp|gif)$/i;
 const ACTIONS = [
   {i:4,label:"Up"},{i:5,label:"Down"},{i:6,label:"Left"},{i:7,label:"Right"},
   {i:2,label:"Coin"},{i:3,label:"Start"},
-  {i:0,label:"Button 1"},{i:8,label:"Button 2"},{i:1,label:"Button 3"},{i:9,label:"Button 4"},{i:10,label:"Button 5"},{i:11,label:"Button 6"}
+  {i:0,label:"Button 1"},{i:8,label:"Button 2"},{i:1,label:"Button 3"},{i:9,label:"Button 4"},{i:10,label:"Button 5"},{i:11,label:"Button 6"},
+  {i:12,label:"Button 7"},{i:13,label:"Button 8"},{i:14,label:"Extra 1"},{i:15,label:"Extra 2"}
 ];
-const DEFAULT_PAD = {4:"DPAD_UP",5:"DPAD_DOWN",6:"DPAD_LEFT",7:"DPAD_RIGHT",2:"SELECT",3:"START",0:"BUTTON_1",8:"BUTTON_2",1:"BUTTON_3",9:"BUTTON_4",10:"LEFT_TOP_SHOULDER",11:"RIGHT_TOP_SHOULDER"};
-const DEFAULT_KEYS = {4:"up arrow",5:"down arrow",6:"left arrow",7:"right arrow",2:"5",3:"1",0:"z",8:"x",1:"a",9:"s",10:"q",11:"w"};
+const DEFAULT_PAD = {4:"DPAD_UP",5:"DPAD_DOWN",6:"DPAD_LEFT",7:"DPAD_RIGHT",2:"SELECT",3:"START",0:"BUTTON_1",8:"BUTTON_2",1:"BUTTON_3",9:"BUTTON_4",10:"LEFT_TOP_SHOULDER",11:"RIGHT_TOP_SHOULDER",
+  12:"LEFT_BOTTOM_SHOULDER",13:"RIGHT_BOTTOM_SHOULDER",14:"LEFT_STICK",15:"RIGHT_STICK"};
+const DEFAULT_KEYS = {4:"up arrow",5:"down arrow",6:"left arrow",7:"right arrow",2:"5",3:"1",0:"z",8:"x",1:"a",9:"s",10:"q",11:"w",12:"c",13:"v",14:"e",15:"d"};
+
+/* What the extra buttons do in particular games (FinalBurn Neo's mapping), keyed by set or parent set */
+const WILLIAMS = {extra:{14:"Auto Up / Manual Down",15:"High Score Reset"},
+  tip:"If it stops on the start-up test or “factory settings restored” screen, tap 🛠️ Service (or press F2) to move on. You may need to do it more than once."};
+const GAME_HELP = {
+  defender:WILLIAMS, stargate:WILLIAMS, robotron:WILLIAMS, joust:WILLIAMS, sinistar:WILLIAMS,
+  spacduel:{extra:{15:"Select game type"}, tip:"Insert a coin, press Extra 2 to choose 1 player, 2 players or team play, then press Start."},
+  asteroid:{extra:{15:"Player 2 Start"}}, astdelux:{extra:{15:"Player 2 Start"}},
+  llander:{extra:{14:"Abort",15:"Select Game"}, tip:"Press Extra 2 to pick a difficulty, then Start."},
+  qix:{extra:{12:"Test Next Line",13:"Test Advance",14:"Test Slew Down",15:"Test Slew Up"}},
+  invds:{extra:{15:"Select"}}, invho2:{extra:{15:"Select"}}
+};
 const PAD_BUTTONS = ["BUTTON_1","BUTTON_2","BUTTON_3","BUTTON_4","LEFT_TOP_SHOULDER","RIGHT_TOP_SHOULDER","LEFT_BOTTOM_SHOULDER","RIGHT_BOTTOM_SHOULDER","SELECT","START","LEFT_STICK","RIGHT_STICK","DPAD_UP","DPAD_DOWN","DPAD_LEFT","DPAD_RIGHT"];
 const PAD_NAMES = {BUTTON_1:"A (bottom)",BUTTON_2:"B (right)",BUTTON_3:"X (left)",BUTTON_4:"Y (top)",LEFT_TOP_SHOULDER:"LB / L1",RIGHT_TOP_SHOULDER:"RB / R1",
   LEFT_BOTTOM_SHOULDER:"LT / L2",RIGHT_BOTTOM_SHOULDER:"RT / R2",SELECT:"Select / Back",START:"Start / Menu",LEFT_STICK:"Left stick press",RIGHT_STICK:"Right stick press",
@@ -488,7 +523,21 @@ const $ = id => document.getElementById(id);
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function baseName(file){ return file.replace(/\.[a-z0-9]+$/i,"").toLowerCase(); }
 function norm(s){ return String(s).toLowerCase().replace(/[^a-z0-9]/g,""); }
-function prettify(b){ return TITLES[b] || b.replace(/[_\-]+/g," ").replace(/\b\w/g,c=>c.toUpperCase()); }
+function prettify(b){
+  if(TITLES[b]) return TITLES[b];
+  const e = artIndex && artIndex[b];
+  if(e && e[0]){ let t = e[0]; for(let k=0;k<3;k++) t = t.replace(/\s*[\(\[][^\)\]]*[\)\]]\s*$/,""); if(t.trim()) return t.trim(); }
+  return b.replace(/[_\-]+/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+}
+/* Picture library index: set name -> [description, thumbnail name (0 = same), flags (1 flyer, 2 title, 4 screenshot), parent] */
+let artIndex = null, artIndexP = null;
+function loadArtIndex(){
+  if(artIndex) return Promise.resolve(artIndex);
+  if(!artIndexP) artIndexP = fetch("art-index.json").then(r=>r.ok?r.json():null).then(j=>{ artIndex=j; return j; }).catch(()=>{ artIndexP=null; return null; });
+  return artIndexP;
+}
+const THUMB_BASE = "https://raw.githubusercontent.com/libretro-thumbnails/FBNeo_-_Arcade_Games/master/";
+function thumbUrl(name, folder){ return THUMB_BASE+folder+"/"+encodeURIComponent(name.replace(/[&*\/:`<>?\\|"]/g,"_"))+".png"; }
 function hash(s){ let h=2166136261; for(const c of s){ h^=c.charCodeAt(0); h=Math.imul(h,16777619);} return h>>>0; }
 const PALETTES = [["#ff4fa3","#7b2ff7"],["#3fe0ff","#2b4cff"],["#ffd23f","#ff6b3f"],["#55e39a","#118a7e"],["#ff6b6b","#a71d6f"],["#b388ff","#4527a0"],["#ff9f43","#d63031"],["#00d2d3","#5f27cd"]];
 function initials(t){
@@ -617,14 +666,16 @@ $("artInput").addEventListener("change", async e=>{
   if(f && artTarget) await setArt(artTarget, f);
 });
 async function setArt(g, file){
-  try{ g.art = await makeArt(file); g.artAt = Date.now(); await saveGame(g); await refresh(); toast("Artwork added to "+g.title+" 🖼️"); }
+  try{ g.art = await makeArt(file); g.artAt = Date.now(); g.artV = 2; await saveGame(g); await refresh(); toast("Artwork added to "+g.title+" 🖼️"); }
   catch(err){ toast("That picture couldn't be used — try a PNG or JPG"); }
 }
 
 function gameMenu(g){
   const engOpts = Object.keys(ENGINES).map(k=>'<button class="opt '+(g.engine===k?'sel':'')+'" data-act="eng:'+k+'"><span class="e">⚙️</span><span>'+ENGINES[k].label+'<small>'+ENGINES[k].desc+'</small></span></button>').join("");
   sheet('<h3>'+esc(g.title)+'</h3><p>File: '+esc(g.file)+' · '+mb(g.size||0)+'</p><div class="opts">'+
-    '<button class="opt" data-act="art"><span class="e">🖼️</span><span>'+(g.art?'Change artwork':'Add artwork')+'<small>Pick a picture for this game\'s cover</small></span></button>'+
+    (g.art && !g.artV ? '<p style="background:#2b2350;border-radius:12px;padding:10px 12px;color:#e6defc;font-size:14.5px">ℹ️ This picture was added before the Fill / Fit / Stretch options existed, so it was already trimmed to the card\'s shape and those options won\'t change it. Use <b>Find artwork online</b> or <b>Change artwork</b> to add it again.</p>' : '')+
+    '<button class="opt" data-act="find"><span class="e">🔎</span><span>Find artwork online<small>Pick from flyers, title screens and screenshots</small></span></button>'+
+    '<button class="opt" data-act="art"><span class="e">🖼️</span><span>'+(g.art?'Change artwork':'Add artwork')+'<small>Choose a picture from your device</small></span></button>'+
     (g.art ? [["fill","🔲","Fill the card","Crops the edges if the shapes differ"],["fit","🖼️","Fit the whole picture","Shrinks it to fit, with a soft background"],["stretch","↔️","Stretch to the card","Fills the card exactly, may squash the picture"]]
       .map(([v,ic,t,d])=>'<button class="opt '+((g.artFit||settings.artFit||"fill")===v?'sel':'')+'" data-act="fit:'+v+'"><span class="e">'+ic+'</span><span>'+t+'<small>'+d+'</small></span></button>').join("") : '')+
     (g.art?'<button class="opt" data-act="noart"><span class="e">🎨</span>Remove artwork</button>':'')+
@@ -635,6 +686,7 @@ function gameMenu(g){
     '<button class="opt danger" data-act="delete"><span class="e">🗑️</span>Remove game</button></div>',
   async (act, s)=>{
     if(act==="art"){ s.remove(); artTarget=g; $("artInput").click(); }
+    else if(act==="find"){ s.remove(); artFinder([g], true); }
     else if(act.startsWith("fit:")){ g.artFit = act.slice(4); await saveGame(g); s.remove(); refresh(); }
     else if(act==="noart"){ delete g.art; g.artAt=Date.now(); await saveGame(g); s.remove(); refresh(); }
     else if(act==="rename"){
@@ -721,6 +773,7 @@ async function importFiles(files, agreedAlready){
   const other = files.filter(f=>!zips.includes(f) && !imgs.includes(f));
   if(!zips.length && !imgs.length){ toast(other.some(f=>/\.7z$/i.test(f.name)) ? "Only .zip files work — unzip .7z files first" : "Those aren't game .zip files or pictures", 3500); return; }
   importing = true;
+  if(zips.length){ setProgress(0, "Getting ready…", ""); await loadArtIndex(); }
   const total = [...zips,...imgs].reduce((a,f)=>a+f.size,0) || 1;
   let done = 0, added = 0, replaced = 0, support = 0, arts = 0, bad = [], unmatched = [];
   const n = zips.length + imgs.length; let k = 0;
@@ -751,7 +804,7 @@ async function importFiles(files, agreedAlready){
       const b = norm(baseName(f.name));
       const g = games.find(x=>norm(x.id)===b) || games.find(x=>norm(x.title)===b);
       if(!g){ unmatched.push(f.name); done+=f.size; continue; }
-      try{ g.art = await makeArt(f); g.artAt = Date.now(); await saveGame(g); arts++; }
+      try{ g.art = await makeArt(f); g.artAt = Date.now(); g.artV = 2; await saveGame(g); arts++; }
       catch(err){ bad.push(f.name+" (picture couldn't be read)"); }
       done += f.size;
     }
@@ -816,20 +869,36 @@ let padLoop = null, listening = null;
 function padLabel(v){ return v ? (PAD_NAMES[v] || v.replace(/_/g," ").toLowerCase()) : "—"; }
 function keyLabel(v){ return v ? (KEY_NAMES[v] || (v.length===1 ? v.toUpperCase() : v.replace(/\b\w/g,c=>c.toUpperCase()))) : "—"; }
 function renderMap(){
-  const html = ACTIONS.map(a=>'<tr data-i="'+a.i+'"><td>'+a.label+'</td>'+
+  const html = ACTIONS.map(a=>'<tr data-i="'+a.i+'"><td>'+esc(actionLabel(a.i))+'</td>'+
     '<td><button class="mapbtn" data-pad="'+a.i+'">'+esc(padLabel(settings.pad[a.i]))+'</button></td>'+
     '<td><button class="mapbtn" data-key="'+a.i+'">'+esc(keyLabel(settings.keys[a.i]))+'</button></td></tr>').join("");
   document.querySelectorAll(".mapbody").forEach(t=>t.innerHTML=html);
   renderKeysPanel();
 }
+function gameHelp(g){
+  if(!g) return null;
+  const e = artIndex && artIndex[g.id];
+  return GAME_HELP[g.id] || (e && e[3] && GAME_HELP[e[3]]) || null;
+}
+function actionLabel(i){
+  const h = gameHelp(current);
+  const base = ACTIONS.find(x=>x.i===i).label;
+  return h && h.extra && h.extra[i] ? h.extra[i] : base;
+}
 function renderKeysPanel(){
   const el = $("keysPanel"); if(!el) return;
-  const row = i=>{ const a=ACTIONS.find(x=>x.i===i);
-    return '<div class="kp-row"><span class="a">'+a.label+'</span><span class="k"><span class="kp-key">'+esc(keyLabel(settings.keys[i]))+'</span><span class="kp-pad">🎮 '+esc(padLabel(settings.pad[i]))+'</span></span></div>'; };
+  const h = gameHelp(current);
+  const row = i=>{ const a={label:actionLabel(i)};
+    return '<div class="kp-row"><span class="a">'+esc(a.label)+'</span><span class="k"><span class="kp-key">'+esc(keyLabel(settings.keys[i]))+'</span><span class="kp-pad">🎮 '+esc(padLabel(settings.pad[i]))+'</span></span></div>'; };
   el.innerHTML = '<div class="kp-h"><b>⌨️ Keys</b><button id="kpHide" title="Hide this panel">✕</button></div>'+
     '<div class="kp-group">Insert coin & start</div>'+row(2)+row(3)+
     '<div class="kp-group">Move</div>'+[4,5,6,7].map(row).join("")+
     '<div class="kp-group">Buttons</div>'+[0,8,1,9,10,11].map(row).join("")+
+    (h && h.extra ? '<div class="kp-group">This game</div>'+Object.keys(h.extra).map(Number).map(row).join("") : '')+
+    (h && h.tip ? '<div class="kp-tip">💡 '+esc(h.tip)+'</div>' : '')+
+    '<div class="kp-group">Machine</div>'+
+    '<div class="kp-mach"><button data-mach="service">🛠️ Service <small style="opacity:.7">F2</small></button><button data-mach="reset">🔄 Reset <small style="opacity:.7">F3</small></button>'+
+    '<button data-mach="coin2">🪙 P2 Coin <small style="opacity:.7">6</small></button><button data-mach="start2">▶ P2 Start <small style="opacity:.7">2</small></button></div>'+
     '<button class="kp-change" id="kpChange">Change keys</button>';
 }
 document.addEventListener("click", e=>{
@@ -974,7 +1043,7 @@ function buildControls(){
   for(let i=0;i<30;i++) p0[i] = {};
   for(const a of ACTIONS) p0[a.i] = {value: settings.keys[a.i]||"", value2: settings.pad[a.i]||""};
   Object.assign(p0, {16:{value2:"LEFT_STICK_X:+1"},17:{value2:"LEFT_STICK_X:-1"},18:{value2:"LEFT_STICK_Y:+1"},19:{value2:"LEFT_STICK_Y:-1"}});
-  return {0:p0, 1:{}, 2:{}, 3:{}};
+  return {0:p0, 1:{2:{value:"6"},3:{value:"2"}}, 2:{}, 3:{}};   // player 2: 6 = coin, 2 = start
 }
 
 async function launch(g, resume){
@@ -988,6 +1057,7 @@ async function launch(g, resume){
   document.body.classList.toggle("no-onscreen", !settings.onscreen);
   document.body.classList.toggle("show-keys", !!settings.keysPanel);
   renderKeysPanel();
+  loadArtIndex().then(()=>renderKeysPanel());
 
   // Support files, plus other small sets in the library (clones often need their "parent" set alongside them)
   let budget = 64*1024*1024;
@@ -1014,7 +1084,7 @@ async function launch(g, resume){
   window.EJS_externalFiles = ext;
   window.EJS_color = "#ff4fa3";
   window.EJS_backgroundColor = "#000000";
-  window.EJS_defaultOptions = {"save-state-location":"browser"};
+  window.EJS_defaultOptions = Object.assign({"save-state-location":"browser"}, g.coreOpts || {});   // saved game settings, applied before the machine boots
   window.EJS_Buttons = {playPause:false,play:false,pause:false,restart:false,mute:false,unmute:false,settings:false,fullscreen:false,
     saveState:false,loadState:false,screenRecord:false,gamepad:false,cheat:false,volume:false,volumeSlider:false,saveSavFiles:false,
     loadSavFiles:false,quickSave:false,quickLoad:false,screenshot:false,cacheManager:false,exitEmulation:false,netplay:false,
@@ -1038,6 +1108,7 @@ async function launch(g, resume){
       setTimeout(()=>{ try{ e.gameManager.loadState(pendingState); toast("Welcome back! 🎮"); }catch(err){ toast("Couldn't load your save"); } }, 300);
     }
     unlockAudio(); updateSoundBtn(); setInterval(updateSoundBtn, 1000);
+    renderKeysPanel(); renderMap();
     const touchOnly = window.matchMedia && matchMedia("(hover: none)").matches;
     setTimeout(()=>toast(touchOnly ? "Tip: press Coin, then Start" : "⌨️ "+keyboardSummary(), touchOnly?2600:7000), pendingState?2800:600);
   };
@@ -1112,6 +1183,138 @@ $("pControls").onclick = ()=>{
         if(settings.keysPanel && innerWidth<=760) toast("The panel needs a wider screen — try turning your tablet sideways"); return; } if(a==="done"){ s.remove(); close(); } }, close);
   renderMap(); startPadLoop();
 };
+
+/* ---- Machine buttons (service, reset, player 2) ---- */
+// A clean restart: reload the page and start the same game again (the engine's own reset isn't reliable)
+function relaunch(){
+  try{ sessionStorage.setItem("ea-autoplay", current.id); }catch(e){}
+  try{ window.EJS_emulator.pause(); window.EJS_emulator.started = false; }catch(e){}
+  try{ history.replaceState(null, "", "#library"); }catch(e){}
+  setTimeout(()=>location.reload(), 150);
+}
+function tapInput(player, index, ms){
+  const e = emu(); if(!e) { toast("The game is still loading"); return; }
+  try{ e.gameManager.simulateInput(player, index, 1); setTimeout(()=>{ try{ e.gameManager.simulateInput(player, index, 0); }catch(err){} }, ms||150); }catch(err){}
+}
+function machine(act){
+  const e = emu(); if(!e){ toast("The game is still loading"); return; }
+  if(paused){ e.play(); paused=false; $("pPause").textContent="⏸ Pause"; }
+  if(act==="service"){ tapInput(0, 3, 1300); toast("🛠️ Service / Advance pressed"); }       // FinalBurn Neo: holding Start = the machine's service/advance switch
+  else if(act==="reset"){ toast("🔄 Restarting the machine…"); relaunch(); }
+  else if(act==="coin2"){ tapInput(1, 2); toast("🪙 Player 2 coin"); }
+  else if(act==="start2"){ tapInput(1, 3); }
+  else if(act==="extra1"){ tapInput(0, 14, 200); }
+  else if(act==="extra2"){ tapInput(0, 15, 200); }
+}
+document.addEventListener("click", e=>{ const b=e.target.closest("[data-mach]"); if(b){ e.preventDefault(); machine(b.dataset.mach); } });
+window.addEventListener("keydown", e=>{
+  if(listening || $("player").classList.contains("hidden")) return;
+  if(e.keyCode===113){ e.preventDefault(); e.stopPropagation(); machine("service"); }      // F2
+  else if(e.keyCode===114){ e.preventDefault(); e.stopPropagation(); machine("reset"); }   // F3
+}, true);
+
+$("pMachine").onclick = ()=>{
+  const h = gameHelp(current);
+  const ex = i => h && h.extra && h.extra[i] ? h.extra[i] : "Game-specific";
+  sheet('<h3>🛠️ Machine buttons</h3><p>The extra switches inside a real arcade cabinet. Use them if a game is stuck on a test screen, or needs a special button.</p>'+
+    (h && h.tip ? '<p style="background:#2b2350;border-radius:12px;padding:10px 12px;color:#e6defc">💡 '+esc(h.tip)+'</p>' : '')+
+    '<div class="mach-grid">'+
+      '<button data-mach="service">🛠️ Service / Advance<small>F2 · moves past test screens</small></button>'+
+      '<button data-mach="reset">🔄 Restart machine<small>F3 · unsaved progress is lost</small></button>'+
+      '<button data-mach="extra1">➕ Extra 1<small>'+esc(ex(14))+' · '+esc(keyLabel(settings.keys[14]))+'</small></button>'+
+      '<button data-mach="extra2">➕ Extra 2<small>'+esc(ex(15))+' · '+esc(keyLabel(settings.keys[15]))+'</small></button>'+
+      '<button data-mach="coin2">🪙 Player 2 coin<small>Key 6</small></button>'+
+      '<button data-mach="start2">▶ Player 2 start<small>Key 2</small></button>'+
+    '</div><div class="opts"><button class="opt" data-act="dips"><span class="e">⚙️</span><span>Game settings<small>The machine\'s DIP switches: lives, difficulty, coins per credit…</small></span></button>'+
+    '<button class="opt primary" data-act="done"><span class="e">✅</span>Back to the game</button></div>',
+    (a,s)=>{ if(a==="done") s.remove(); if(a==="dips"){ s.remove(); gameSettings(); } });
+};
+
+function parseCoreOptions(e){
+  let txt=""; try{ txt = e.gameManager.getCoreOptions() || ""; }catch(err){}
+  return txt.split("\n").filter(Boolean).map(line=>{
+    const [k, v] = line.split("; "); if(!v) return null;
+    const key = k.split("|")[0], def = (k.split("|")[1] || v.split("|")[0]).replace("(Default) ","");
+    const vals = v.split("|").map(x=>x.replace("(Default) ",""));
+    if(vals.length < 2) return null;
+    const label = key.replace(/^fbneo-dipswitch-[^-]+-/,"").replace(/^(fbneo|mame2003-plus|mame2003_plus)[-_]/,"").replace(/_/g," ");
+    return {key, def, vals, label, dip: /dipswitch/i.test(key)};
+  }).filter(Boolean);
+}
+function gameSettings(){
+  const e = emu(); if(!e){ toast("The game is still loading"); return; }
+  const opts = parseCoreOptions(e), saved = current.coreOpts || {};
+  const row = o=>'<div class="optrow"><label>'+esc(o.label)+'</label><select data-opt="'+esc(o.key)+'">'+
+    o.vals.map(v=>'<option'+((saved[o.key]||o.def)===v?' selected':'')+'>'+esc(v)+'</option>').join("")+'</select></div>';
+  const dips = opts.filter(o=>o.dip), other = opts.filter(o=>!o.dip);
+  const s = sheet('<h3>⚙️ Game settings</h3><p>'+(dips.length ? 'These are the switches the arcade operator would set. Changes are saved for this game and most need a <b>restart</b> to take effect.' : 'This game has no machine switches to change.')+'</p>'+
+    dips.map(row).join("")+
+    (other.length ? '<details><summary>Advanced engine options</summary>'+other.map(row).join("")+'</details>' : '')+
+    '<div class="opts" style="margin-top:16px"><button class="opt primary" data-act="reset"><span class="e">🔄</span>Restart the machine to apply</button><button class="opt" data-act="defaults"><span class="e">↺</span>Back to factory settings</button><button class="opt" data-act="done"><span class="e">✅</span>Done</button></div>',
+    async (a,s2)=>{
+      if(a==="reset"){ s2.remove(); machine("reset"); }
+      if(a==="done") s2.remove();
+      if(a==="defaults"){ current.coreOpts={}; await saveGame(current); s2.remove(); toast("Factory settings restored"); relaunch(); }
+    });
+  s.addEventListener("change", async ev=>{
+    const sel = ev.target.closest("select[data-opt]"); if(!sel) return;
+    try{ emu().gameManager.setVariable(sel.dataset.opt, sel.value); }catch(err){}
+    current.coreOpts = Object.assign({}, current.coreOpts, {[sel.dataset.opt]: sel.value});
+    await saveGame(current);
+  });
+}
+
+/* ---- Artwork finder ---- */
+$("findArtBtn").onclick = ()=>{
+  const list = games.filter(g=>!g.helper && !g.art);
+  if(!list.length){ toast("Every game already has artwork 🎉 — use a game's ⋯ menu to change one"); return; }
+  artFinder(list, false);
+};
+async function artFinder(list, single){
+  $("progress").classList.add("hidden");
+  const idx = await loadArtIndex();
+  if(!idx){ toast("Couldn't reach the artwork library — check your internet connection"); return; }
+  let i = 0, added = 0;
+  const KINDS = [["Named_Boxarts","Flyer / box art",1],["Named_Titles","Title screen",2],["Named_Snaps","Screenshot",4]];
+  const step = ()=>{
+    if(i >= list.length){
+      if(!single) toast(added ? "Added artwork to "+added+" game"+(added>1?"s":"")+" 🖼️" : "No artwork added");
+      refresh(); return;
+    }
+    const g = list[i], e = idx[g.id] || (g.id.includes("_") ? null : null);
+    const name = e ? (e[1] || e[0]) : null, flags = e ? e[2] : 0;
+    const web = "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(g.title+" arcade flyer");
+    const cards = name ? KINDS.map(([folder,label,bit])=> flags & bit
+        ? '<button data-act="pick" data-url="'+esc(thumbUrl(name, folder))+'"><img loading="lazy" alt="" src="'+esc(thumbUrl(name, folder))+'"><span>'+label+'</span></button>'
+        : '<button disabled><div class="miss">None</div><span>'+label+'</span></button>').join("") : '';
+    sheet('<h3>'+(list.length>1 ? (i+1)+' of '+list.length+' · ' : '')+esc(g.title)+'</h3>'+
+      (name ? '<p>Tap the picture you\'d like to use for this game.</p><div class="finder-imgs">'+cards+'</div>'
+            : '<p>This game isn\'t in the artwork library. You can search the web, save a picture, then use <b>Choose my own picture</b>.</p>')+
+      '<p style="font-size:14px">Not right? <a class="weblink" href="'+esc(web)+'" target="_blank" rel="noopener">Search the web for “'+esc(g.title)+'” ↗</a></p>'+
+      '<div class="opts">'+
+        '<button class="opt" data-act="own"><span class="e">📂</span>Choose my own picture</button>'+
+        (list.length>1 && i<list.length-1 ? '<button class="opt" data-act="skip"><span class="e">⏭️</span>Skip this game</button>' : '')+
+        '<button class="opt" data-act="stop"><span class="e">✋</span>'+(list.length>1 ? 'Stop' : 'Cancel')+'</button></div>'+
+      '<p style="font-size:12.5px;margin:14px 0 0">Pictures from the libretro-thumbnails project. Artwork belongs to its owners.</p>',
+      async (a, s, btn)=>{
+        if(a==="pick"){
+          btn.style.opacity=.5; s.querySelectorAll("button").forEach(b=>b.disabled=true);
+          try{
+            const r = await fetch(btn.dataset.url); if(!r.ok) throw new Error(r.status);
+            const blob = await r.blob();
+            g.art = await makeArt(blob); g.artAt = Date.now(); g.artV = 2;
+            if(!g.artFit) g.artFit = "fit";          // flyers are tall; show the whole picture
+            await saveGame(g); added++;
+            if(single) toast("Artwork added to "+g.title+" 🖼️");
+          }catch(err){ toast("Couldn't download that picture — try another"); s.querySelectorAll("button").forEach(b=>b.disabled=false); btn.style.opacity=1; return; }
+          s.remove(); i++; step();
+        } else if(a==="skip"){ s.remove(); i++; step(); }
+        else if(a==="own"){ s.remove(); artTarget=g; $("artInput").click(); i = list.length; refresh(); }
+        else if(a==="stop"){ s.remove(); i = list.length; step(); }
+      }, ()=>{ i = list.length; step(); });
+  };
+  step();
+}
 
 /* ---- Sound ---- */
 let muted = false;

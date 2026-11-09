@@ -34,3 +34,17 @@ Only play ROMs you're legally allowed to use.
 - [MAME 2003-Plus](https://github.com/libretro/mame2003-plus-libretro) libretro core. MAME non-commercial licence, see `ejs/data/cores/mame2003_plus_license.txt`.
 
 The interface (`index.html`) was made for personal, non-commercial use.
+
+## Machine buttons and game settings
+
+Some games use switches from inside the real arcade cabinet. Tap **🛠️ Machine** in the game bar for:
+
+- **Service / Advance** (F2): moves past start-up test screens, for example in Defender, Robotron and Joust.
+- **Restart machine** (F3).
+- **Extra 1 / Extra 2** (E / D): game-specific buttons, for example Space Duel's game-type select.
+- **Player 2 coin / start** (6 / 2).
+- **Game settings**: the machine's DIP switches, such as lives, difficulty and coins per credit. These are saved for each game.
+
+## Artwork finder
+
+**🔎 Find artwork** in the library goes through each game that has no picture and offers its flyer, title screen and screenshot from the [libretro-thumbnails](https://github.com/libretro-thumbnails) project. `art-index.json` maps each game file name to its pictures; it's built from the FinalBurn Neo arcade game list.
