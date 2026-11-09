@@ -59,8 +59,10 @@
     box-shadow:0 6px 0 #0b0818;transition:transform .12s, outline-color .12s;outline:4px solid transparent;cursor:pointer}
   .tile:active{transform:scale(.97)}
   .tile.droptarget{outline-color:var(--cyan);transform:scale(1.03)}
-  .art{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background-size:cover;background-position:center}
-  .art .ini{font-family:'Press Start 2P',monospace;font-size:clamp(26px,4.5vw,40px);color:#fff;text-shadow:0 4px 0 #0004;z-index:1}
+  .art{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:#0b0818}
+  .art .artimg{position:absolute;inset:0;background-position:center;background-repeat:no-repeat;z-index:1}
+  .art .artblur{position:absolute;inset:-24px;background-size:cover;background-position:center;filter:blur(16px) brightness(.55);z-index:0}
+  .art .ini{font-family:'Press Start 2P',monospace;font-size:clamp(26px,4.5vw,40px);color:#fff;text-shadow:0 4px 0 #0004;z-index:2}
   .art.gen::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#ffffff10 0 2px,transparent 2px 5px)}
   .art .play{position:absolute;right:10px;bottom:10px;width:46px;height:46px;border-radius:50%;background:#fff;
     color:#111;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:2;box-shadow:0 3px 8px #0006}
@@ -179,7 +181,21 @@
   .pbtn.alert{background:var(--yellow);color:#1b1230;animation:pulse .8s infinite alternate}
   .pbtn:active{transform:scale(.96)}
   .ptitle{flex:1;min-width:60px;font-weight:800;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);padding:0 6px}
-  #game-wrap{flex:1;position:relative;min-height:0}
+  #game-area{flex:1;display:flex;min-height:0}
+  #game-wrap{flex:1;position:relative;min-height:0;min-width:0}
+  #keysPanel{display:none;width:240px;flex:none;background:#0d0a1c;border-left:2px solid var(--line);padding:14px 14px 18px;overflow-y:auto}
+  body.show-keys #keysPanel{display:block}
+  @media (max-width:760px){ body.show-keys #keysPanel{display:none} }
+  .kp-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .kp-h b{font-size:18px}
+  .kp-h button{background:var(--panel2);width:34px;height:34px;border-radius:10px;font-size:15px}
+  .kp-group{color:var(--muted);font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;margin:12px 0 6px}
+  .kp-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 0}
+  .kp-row .a{font-weight:700;font-size:15px}
+  .kp-row .k{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+  .kp-key{background:var(--panel2);border:1px solid var(--line);border-bottom-width:3px;border-radius:8px;padding:3px 9px;font-weight:800;font-size:15px;min-width:30px;text-align:center}
+  .kp-pad{color:var(--muted);font-size:12px}
+  .kp-change{margin-top:14px;width:100%;background:var(--pink);border-radius:12px;padding:10px;font-weight:800}
   #game{width:100%;height:100%}
   #game .ejs_menu_bar, #game .ejs_context_menu{display:none !important}
   body.no-onscreen #game .ejs_virtualGamepad_parent{display:none !important}
@@ -262,6 +278,7 @@
       <p>The touch joystick and buttons shown on touch screens.</p>
       <div class="row"><div class="l">Show on-screen controls<small>Turn off if you always use a controller</small></div><label class="switch"><input type="checkbox" id="sOnscreen"><span></span></label></div>
       <div class="row"><div class="l">Left-handed layout<small>Joystick on the right, buttons on the left</small></div><label class="switch"><input type="checkbox" id="sLeft"><span></span></label></div>
+      <div class="row"><div class="l">Show keys beside the game<small>A panel listing the current keys and buttons (on wider screens)</small></div><label class="switch"><input type="checkbox" id="sKeysPanel"><span></span></label></div>
     </div>
 
     <div class="card">
@@ -282,6 +299,8 @@
       <div class="row"><div class="l">Volume<small id="volTxt">80%</small></div><input type="range" id="sVol" min="0" max="100" step="5"></div>
       <div class="row"><div class="l">Engine for new games<small>You can change it for any game from its ⋯ menu</small></div>
         <div class="seg" id="sEngine"><button data-v="fbneo">FinalBurn Neo</button><button data-v="mame2003_plus">MAME 2003-Plus</button></div></div>
+      <div class="row"><div class="l">Artwork style<small>How pictures fit the game cards. You can change it per game from its ⋯ menu</small></div>
+        <div class="seg" id="sArtFit"><button data-v="fill">Fill</button><button data-v="fit">Fit</button><button data-v="stretch">Stretch</button></div></div>
     </div>
 
     <div class="card">
@@ -318,7 +337,10 @@
     <button class="pbtn" id="pControls">⌨️ Controls</button>
     <button class="pbtn" id="pFull">⛶</button>
   </div>
-  <div id="game-wrap"><div id="game"></div></div>
+  <div id="game-area">
+    <div id="game-wrap"><div id="game"></div></div>
+    <aside id="keysPanel" aria-label="Current keys"></aside>
+  </div>
 </div>
 
 <div id="progress" class="hidden">
@@ -424,7 +446,7 @@ const KEY_NAMES = {"up arrow":"↑","down arrow":"↓","left arrow":"←","right
 /* ================= Settings ================= */
 function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v); }catch(e){ return d; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
-const settings = Object.assign({onscreen:true,leftHanded:false,volume:80,engine:"fbneo",pad:{},keys:{}}, lsGet("ea-settings",{}));
+const settings = Object.assign({onscreen:true,leftHanded:false,keysPanel:true,artFit:"fill",volume:80,engine:"fbneo",pad:{},keys:{}}, lsGet("ea-settings",{}));
 settings.pad = Object.assign({}, DEFAULT_PAD, settings.pad);
 settings.keys = Object.assign({}, DEFAULT_KEYS, settings.keys);
 function saveSettings(){ lsSet("ea-settings", settings); }
@@ -509,10 +531,12 @@ async function makeArt(file){
   const url = URL.createObjectURL(file);
   try{
     const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
-    const W=640, H=480, c=document.createElement("canvas"); c.width=W; c.height=H;
+    // Keep the whole picture (the card decides how to fit it); just shrink big images
+    const k = Math.min(1, 900/Math.max(img.naturalWidth, img.naturalHeight));
+    const W = Math.max(1,Math.round(img.naturalWidth*k)), H = Math.max(1,Math.round(img.naturalHeight*k));
+    const c=document.createElement("canvas"); c.width=W; c.height=H;
     const g=c.getContext("2d"); g.fillStyle="#000"; g.fillRect(0,0,W,H);
-    const s=Math.max(W/img.naturalWidth, H/img.naturalHeight), w=img.naturalWidth*s, h=img.naturalHeight*s;
-    g.drawImage(img,(W-w)/2,(H-h)/2,w,h);
+    g.drawImage(img,0,0,W,H);
     return await new Promise(res=>c.toBlob(b=>res(b),"image/jpeg",0.86));
   } finally { URL.revokeObjectURL(url); }
 }
@@ -558,9 +582,13 @@ function render(){
     .sort((a,b)=>(b.lastPlayed||0)-(a.lastPlayed||0) || a.title.localeCompare(b.title));
   $("grid").innerHTML = list.map(g=>{
     const p = PALETTES[hash(g.id)%PALETTES.length], u = artUrl(g);
-    const bg = u ? 'background-image:url('+u+')' : 'background:linear-gradient(135deg,'+p[0]+','+p[1]+')';
+    const fit = g.artFit || settings.artFit || "fill";
+    const size = fit==="fit" ? "contain" : fit==="stretch" ? "100% 100%" : "cover";
+    const bg = u ? '' : 'background:linear-gradient(135deg,'+p[0]+','+p[1]+')';
     return '<div class="tile" role="button" tabindex="0" data-id="'+esc(g.id)+'">'+
       '<div class="art'+(u?'':' gen')+'" style="'+bg+'">'+
+        (u && fit==="fit" ? '<div class="artblur" style="background-image:url('+u+')"></div>' : '')+
+        (u ? '<div class="artimg" style="background-image:url('+u+');background-size:'+size+'"></div>' : '')+
         (saved.has(g.id)?'<span class="badge">💾 Saved</span>':'')+
         (u?'':'<span class="ini">'+esc(initials(g.title))+'</span>')+'<span class="play">▶</span></div>'+
       '<div class="meta"><div class="title">'+esc(g.title)+'</div><div class="sub">'+esc(ago(g.lastPlayed))+'</div></div>'+
@@ -597,6 +625,8 @@ function gameMenu(g){
   const engOpts = Object.keys(ENGINES).map(k=>'<button class="opt '+(g.engine===k?'sel':'')+'" data-act="eng:'+k+'"><span class="e">⚙️</span><span>'+ENGINES[k].label+'<small>'+ENGINES[k].desc+'</small></span></button>').join("");
   sheet('<h3>'+esc(g.title)+'</h3><p>File: '+esc(g.file)+' · '+mb(g.size||0)+'</p><div class="opts">'+
     '<button class="opt" data-act="art"><span class="e">🖼️</span><span>'+(g.art?'Change artwork':'Add artwork')+'<small>Pick a picture for this game\'s cover</small></span></button>'+
+    (g.art ? [["fill","🔲","Fill the card","Crops the edges if the shapes differ"],["fit","🖼️","Fit the whole picture","Shrinks it to fit, with a soft background"],["stretch","↔️","Stretch to the card","Fills the card exactly, may squash the picture"]]
+      .map(([v,ic,t,d])=>'<button class="opt '+((g.artFit||settings.artFit||"fill")===v?'sel':'')+'" data-act="fit:'+v+'"><span class="e">'+ic+'</span><span>'+t+'<small>'+d+'</small></span></button>').join("") : '')+
     (g.art?'<button class="opt" data-act="noart"><span class="e">🎨</span>Remove artwork</button>':'')+
     '<button class="opt" data-act="rename"><span class="e">✏️</span>Rename</button>'+
     engOpts+
@@ -605,6 +635,7 @@ function gameMenu(g){
     '<button class="opt danger" data-act="delete"><span class="e">🗑️</span>Remove game</button></div>',
   async (act, s)=>{
     if(act==="art"){ s.remove(); artTarget=g; $("artInput").click(); }
+    else if(act.startsWith("fit:")){ g.artFit = act.slice(4); await saveGame(g); s.remove(); refresh(); }
     else if(act==="noart"){ delete g.art; g.artAt=Date.now(); await saveGame(g); s.remove(); refresh(); }
     else if(act==="rename"){
       s.remove();
@@ -789,18 +820,37 @@ function renderMap(){
     '<td><button class="mapbtn" data-pad="'+a.i+'">'+esc(padLabel(settings.pad[a.i]))+'</button></td>'+
     '<td><button class="mapbtn" data-key="'+a.i+'">'+esc(keyLabel(settings.keys[a.i]))+'</button></td></tr>').join("");
   document.querySelectorAll(".mapbody").forEach(t=>t.innerHTML=html);
+  renderKeysPanel();
 }
+function renderKeysPanel(){
+  const el = $("keysPanel"); if(!el) return;
+  const row = i=>{ const a=ACTIONS.find(x=>x.i===i);
+    return '<div class="kp-row"><span class="a">'+a.label+'</span><span class="k"><span class="kp-key">'+esc(keyLabel(settings.keys[i]))+'</span><span class="kp-pad">🎮 '+esc(padLabel(settings.pad[i]))+'</span></span></div>'; };
+  el.innerHTML = '<div class="kp-h"><b>⌨️ Keys</b><button id="kpHide" title="Hide this panel">✕</button></div>'+
+    '<div class="kp-group">Insert coin & start</div>'+row(2)+row(3)+
+    '<div class="kp-group">Move</div>'+[4,5,6,7].map(row).join("")+
+    '<div class="kp-group">Buttons</div>'+[0,8,1,9,10,11].map(row).join("")+
+    '<button class="kp-change" id="kpChange">Change keys</button>';
+}
+document.addEventListener("click", e=>{
+  if(e.target.closest("#kpChange")) $("pControls").click();
+  if(e.target.closest("#kpHide")){ settings.keysPanel=false; saveSettings(); document.body.classList.remove("show-keys"); toast("Keys panel hidden — turn it back on from ⌨️ Controls"); }
+});
 function renderSettings(){
   $("sOnscreen").checked = settings.onscreen;
   $("sLeft").checked = settings.leftHanded;
   $("sVol").value = settings.volume; $("volTxt").textContent = settings.volume+"%";
   $("sEngine").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.engine));
+  $("sArtFit").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.artFit));
+  $("sKeysPanel").checked = settings.keysPanel;
   renderMap();
   storageInfo();
 }
 $("sOnscreen").onchange = e=>{ settings.onscreen=e.target.checked; saveSettings(); };
 $("sLeft").onchange = e=>{ settings.leftHanded=e.target.checked; saveSettings(); };
 $("sVol").oninput = e=>{ settings.volume=+e.target.value; $("volTxt").textContent=settings.volume+"%"; saveSettings(); };
+$("sArtFit").onclick = e=>{ const b=e.target.closest("button"); if(!b) return; settings.artFit=b.dataset.v; saveSettings(); renderSettings(); render(); toast("Artwork will "+({fill:"fill the cards",fit:"fit inside the cards",stretch:"stretch to the cards"})[settings.artFit]); };
+$("sKeysPanel").onchange = e=>{ settings.keysPanel=e.target.checked; saveSettings(); };
 $("sEngine").onclick = e=>{ const b=e.target.closest("button"); if(!b) return; settings.engine=b.dataset.v; saveSettings(); renderSettings(); };
 function resetControls(){ settings.pad=Object.assign({},DEFAULT_PAD); settings.keys=Object.assign({},DEFAULT_KEYS); saveSettings(); stopListen(); renderMap(); applyLiveControls(); toast("Controls reset"); }
 $("resetMap").onclick = resetControls;
@@ -936,6 +986,8 @@ async function launch(g, resume){
   $("player").classList.remove("hidden");
   $("pTitle").textContent = g.title;
   document.body.classList.toggle("no-onscreen", !settings.onscreen);
+  document.body.classList.toggle("show-keys", !!settings.keysPanel);
+  renderKeysPanel();
 
   // Support files, plus other small sets in the library (clones often need their "parent" set alongside them)
   let budget = 64*1024*1024;
@@ -1051,8 +1103,13 @@ $("pControls").onclick = ()=>{
   sheet('<h3>⌨️ Controls</h3><p>Tap a box, then press the key or controller button you want to use for it. Changes apply straight away and are kept for all games.</p>'+
     '<div class="pads"></div>'+
     '<table class="maptable"><thead><tr><th>Action</th><th>Controller</th><th>Keyboard</th></tr></thead><tbody class="mapbody"></tbody></table>'+
-    '<div class="opts" style="margin-top:16px"><button class="opt primary" data-act="done"><span class="e">✅</span>Done — back to the game</button><button class="opt" data-act="reset"><span class="e">↺</span>Reset to defaults</button></div>',
-    (a,s)=>{ if(a==="reset"){ resetControls(); return; } if(a==="done"){ s.remove(); close(); } }, close);
+    '<div class="opts" style="margin-top:16px"><button class="opt primary" data-act="done"><span class="e">✅</span>Done — back to the game</button>'+
+    '<button class="opt" data-act="panel"><span class="e">📋</span><span id="panelOptTxt">'+(settings.keysPanel?'Hide':'Show')+' the keys panel beside the game</span></button>'+
+    '<button class="opt" data-act="reset"><span class="e">↺</span>Reset to defaults</button></div>',
+    (a,s)=>{ if(a==="reset"){ resetControls(); return; }
+      if(a==="panel"){ settings.keysPanel=!settings.keysPanel; saveSettings(); document.body.classList.toggle("show-keys", settings.keysPanel);
+        s.querySelector("#panelOptTxt").textContent=(settings.keysPanel?'Hide':'Show')+' the keys panel beside the game';
+        if(settings.keysPanel && innerWidth<=760) toast("The panel needs a wider screen — try turning your tablet sideways"); return; } if(a==="done"){ s.remove(); close(); } }, close);
   renderMap(); startPadLoop();
 };
 
