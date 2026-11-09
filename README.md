@@ -2,15 +2,18 @@
 
 A simple arcade emulator that runs in your web browser, made for tablets.
 
-- Big game tiles: tap a game to play it
-- On-screen joystick and buttons, or a Bluetooth gamepad
+- A start screen with three choices: **Add games**, **Game library** and **Settings**
+- Big game tiles: tap a game to play it. You can add your own artwork to each one.
+- Add games by tapping **Choose files** or by dragging and dropping. A progress bar shows each file as it's added.
+- On-screen joystick and buttons, or a Bluetooth/USB gamepad. Controller and keyboard buttons can be remapped in Settings.
 - Save and Load buttons, plus a "Continue" option when you come back to a game
 - Two engines: **FinalBurn Neo** (the default) and **MAME 2003-Plus** (try it if a game won't start)
 
 ## Using it
 
-1. Open the site and tap **Add games**.
-2. Pick your arcade game `.zip` files. Keep the original set names, such as `pacman.zip` or `sf2.zip`.
+1. Open the site and tap **Add games**. The first time, you'll be asked to confirm you have the right to use the games you add.
+2. Choose or drop your arcade game `.zip` files. Keep the original set names, such as `pacman.zip` or `sf2.zip`.
+   To add artwork, include pictures with the same names, such as `pacman.png`, or drop a picture onto a game tile.
 3. Tap a game, then press **Coin** and **Start**.
 
 Game files are stored in your own browser on your device. They are never uploaded anywhere.

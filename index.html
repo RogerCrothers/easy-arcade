@@ -8,80 +8,168 @@
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#120d24; --panel:#1d1638; --panel2:#2a2150; --ink:#f4efff; --muted:#a99fcc;
+    --bg:#120d24; --panel:#1d1638; --panel2:#2a2150; --line:#3a2f68; --ink:#f4efff; --muted:#a99fcc;
     --pink:#ff4fa3; --cyan:#3fe0ff; --yellow:#ffd23f; --green:#55e39a;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:'Nunito',system-ui,sans-serif}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:'Nunito',system-ui,sans-serif}
   body{overscroll-behavior:none}
   button{font:inherit;cursor:pointer;border:0;color:inherit}
   .hidden{display:none !important}
-
-  /* ---------- Library ---------- */
-  #library{min-height:100%;padding:22px clamp(14px,3vw,36px) 40px;
+  .view{min-height:100vh;padding:22px clamp(14px,3vw,36px) 48px;
     background:radial-gradient(ellipse at 50% -20%,#3b1f6e 0,transparent 60%),var(--bg)}
-  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
-  .logo{font-family:'Press Start 2P',monospace;font-size:clamp(20px,3.6vw,32px);line-height:1.3;letter-spacing:1px}
+  .logo{font-family:'Press Start 2P',monospace;line-height:1.3;letter-spacing:1px}
   .logo .a{color:var(--pink);text-shadow:0 0 18px #ff4fa380}
   .logo .b{color:var(--cyan);text-shadow:0 0 18px #3fe0ff80}
   .big-btn{display:inline-flex;align-items:center;gap:10px;background:var(--pink);color:#fff;font-weight:800;
-    font-size:clamp(17px,2.4vw,21px);padding:14px 24px;border-radius:18px;box-shadow:0 5px 0 #b0236c}
+    font-size:clamp(16px,2.3vw,20px);padding:13px 22px;border-radius:18px;box-shadow:0 5px 0 #b0236c}
   .big-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #b0236c}
-  .big-btn.alt{background:var(--panel2);box-shadow:0 5px 0 #120d24}
-  .search{width:100%;max-width:420px;background:var(--panel);border:2px solid var(--panel2);border-radius:14px;
-    color:var(--ink);font:inherit;font-size:18px;padding:12px 16px;outline:none}
-  .search:focus{border-color:var(--cyan)}
-  .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:22px}
+  .big-btn.alt{background:var(--panel2);box-shadow:0 5px 0 #0b0818}
+  .big-btn:disabled{opacity:.4;transform:none}
+  .topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+  .topbar h1{margin:0;font-size:clamp(22px,3.2vw,30px);flex:1;min-width:150px}
+  .home-link{background:var(--panel2);border-radius:14px;padding:11px 16px;font-weight:800;font-size:17px}
+  .legal-line{color:var(--muted);font-size:14px;text-align:center;margin-top:26px;line-height:1.5}
+  .legal-line button{background:none;color:var(--cyan);text-decoration:underline;font-weight:700;padding:0}
 
+  /* ---------- Home ---------- */
+  #home{display:flex;flex-direction:column;align-items:center}
+  #home .logo{font-size:clamp(28px,6vw,54px);margin:4vh 0 8px;text-align:center}
+  .tag{color:var(--muted);font-size:clamp(16px,2.4vw,20px);margin-bottom:5vh;text-align:center}
+  .home-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(12px,2.4vw,24px);width:min(980px,100%)}
+  @media (max-width:640px){.home-cards{grid-template-columns:1fr}}
+  .hcard{background:var(--panel);border-radius:28px;padding:clamp(20px,3vw,34px) 20px;text-align:center;box-shadow:0 7px 0 #0b0818;
+    display:flex;flex-direction:column;align-items:center;gap:10px;transition:transform .12s}
+  .hcard:active{transform:scale(.97)}
+  .hcard .ic{font-size:clamp(46px,7vw,72px);line-height:1}
+  .hcard .t{font-weight:800;font-size:clamp(20px,2.8vw,27px)}
+  .hcard .d{color:var(--muted);font-size:15px}
+  .hcard.add{background:linear-gradient(160deg,#ff4fa3,#a7287a)}
+  .hcard.add .d{color:#ffe0f0}
+  .continue{margin-top:26px;display:flex;align-items:center;gap:12px;background:var(--panel2);border-radius:18px;padding:12px 18px 12px 12px;font-weight:800;font-size:17px;max-width:100%}
+  .continue .mini{width:64px;height:48px;border-radius:10px;background-size:cover;background-position:center;flex:none;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P';font-size:11px}
+  .continue span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  /* ---------- Library ---------- */
+  .search{width:100%;max-width:420px;background:var(--panel);border:2px solid var(--panel2);border-radius:14px;
+    color:var(--ink);font:inherit;font-size:18px;padding:12px 16px;outline:none;margin-bottom:22px}
+  .search:focus{border-color:var(--cyan)}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(150px,22vw,220px),1fr));gap:clamp(12px,2vw,20px)}
   .tile{position:relative;background:var(--panel);border-radius:22px;overflow:hidden;text-align:left;padding:0;
-    box-shadow:0 6px 0 #0b0818;transition:transform .12s}
+    box-shadow:0 6px 0 #0b0818;transition:transform .12s, outline-color .12s;outline:4px solid transparent;cursor:pointer}
   .tile:active{transform:scale(.97)}
-  .art{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+  .tile.droptarget{outline-color:var(--cyan);transform:scale(1.03)}
+  .art{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background-size:cover;background-position:center}
   .art .ini{font-family:'Press Start 2P',monospace;font-size:clamp(26px,4.5vw,40px);color:#fff;text-shadow:0 4px 0 #0004;z-index:1}
-  .art::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#ffffff10 0 2px,transparent 2px 5px)}
+  .art.gen::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#ffffff10 0 2px,transparent 2px 5px)}
   .art .play{position:absolute;right:10px;bottom:10px;width:46px;height:46px;border-radius:50%;background:#fff;
     color:#111;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:2;box-shadow:0 3px 8px #0006}
   .meta{padding:12px 14px 14px}
   .title{font-weight:800;font-size:clamp(16px,2vw,19px);line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
   .sub{color:var(--muted);font-size:14px;margin-top:4px}
-  .badge{position:absolute;left:10px;top:10px;background:var(--green);color:#0b2a1a;font-weight:800;font-size:13px;
-    padding:4px 10px;border-radius:999px;z-index:2}
-  .more{position:absolute;right:8px;top:8px;width:42px;height:42px;border-radius:12px;background:#0007;color:#fff;
-    font-size:22px;z-index:3;display:flex;align-items:center;justify-content:center}
-
-  .empty{max-width:640px;margin:7vh auto 0;text-align:center;background:var(--panel);border-radius:28px;padding:36px 26px}
+  .badge{position:absolute;left:10px;top:10px;background:var(--green);color:#0b2a1a;font-weight:800;font-size:13px;padding:4px 10px;border-radius:999px;z-index:2}
+  .more{position:absolute;right:8px;top:8px;width:42px;height:42px;border-radius:12px;background:#0008;color:#fff;font-size:22px;z-index:3;display:flex;align-items:center;justify-content:center}
+  .empty{max-width:640px;margin:5vh auto 0;text-align:center;background:var(--panel);border-radius:28px;padding:36px 26px}
   .empty .icon{font-size:72px}
   .empty h2{font-size:clamp(22px,3.2vw,30px);margin:10px 0 8px}
   .empty p{color:var(--muted);font-size:17px;line-height:1.5;margin:0 0 22px}
-  .steps{text-align:left;max-width:460px;margin:0 auto 24px;color:var(--ink);font-size:16px;line-height:1.5}
-  .steps li{margin-bottom:6px}
   .section-label{font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;font-size:13px;margin:28px 0 12px}
   .helpers{display:flex;flex-wrap:wrap;gap:8px}
   .chip{background:var(--panel);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--muted);display:flex;gap:8px;align-items:center}
   .chip button{background:none;color:var(--muted);font-size:16px;padding:0 2px}
+  .drop-hint{color:var(--muted);font-size:15px;margin:-10px 0 18px}
+
+  /* ---------- Add games ---------- */
+  .dropzone{border:3px dashed var(--line);border-radius:28px;padding:clamp(30px,6vw,60px) 20px;text-align:center;background:var(--panel);
+    max-width:760px;margin:0 auto;transition:border-color .15s, background .15s;cursor:pointer}
+  .dropzone.over{border-color:var(--cyan);background:#1f2a4a}
+  .dropzone .ic{font-size:70px}
+  .dropzone h2{margin:8px 0 6px;font-size:clamp(22px,3.2vw,30px)}
+  .dropzone p{color:var(--muted);font-size:17px;margin:0 0 20px;line-height:1.5}
+  .tips{max-width:760px;margin:20px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .tip{background:var(--panel);border-radius:18px;padding:16px;font-size:15px;color:var(--muted);line-height:1.45}
+  .tip b{color:var(--ink);display:block;margin-bottom:4px;font-size:16px}
+  .notice{max-width:760px;margin:20px auto 0;background:#2b1a2e;border:2px solid #5b2a4a;border-radius:18px;padding:14px 18px;font-size:15px;line-height:1.5;color:#ffd6ea}
+
+  /* ---------- Settings ---------- */
+  .set-wrap{max-width:860px;margin:0 auto}
+  .card{background:var(--panel);border-radius:24px;padding:20px clamp(16px,2.5vw,26px);margin-bottom:18px}
+  .card h2{margin:0 0 4px;font-size:22px}
+  .card > p{color:var(--muted);margin:0 0 16px;font-size:15px;line-height:1.5}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-top:1px solid var(--line)}
+  .row:first-of-type{border-top:0}
+  .row .l{font-weight:700;font-size:17px}
+  .row .l small{display:block;color:var(--muted);font-weight:500;font-size:14px;margin-top:2px}
+  .switch{position:relative;width:58px;height:34px;flex:none}
+  .switch input{opacity:0;width:0;height:0}
+  .switch span{position:absolute;inset:0;background:var(--panel2);border-radius:999px;transition:.2s}
+  .switch span::after{content:"";position:absolute;left:4px;top:4px;width:26px;height:26px;border-radius:50%;background:#fff;transition:.2s}
+  .switch input:checked + span{background:var(--green)}
+  .switch input:checked + span::after{transform:translateX(24px)}
+  .seg{display:flex;background:var(--bg);border-radius:14px;padding:4px;gap:4px;flex-wrap:wrap}
+  .seg button{background:none;padding:9px 14px;border-radius:10px;font-weight:700;font-size:15px;color:var(--muted)}
+  .seg button.on{background:var(--panel2);color:var(--ink)}
+  input[type=range]{width:min(260px,45vw);accent-color:var(--pink)}
+  .pads{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+  .pad{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:14px;padding:11px 14px;font-weight:700}
+  .pad .dot{width:11px;height:11px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);flex:none}
+  .pad.none{color:var(--muted);font-weight:500}
+  .pad.none .dot{background:#666;box-shadow:none}
+  .maptable{width:100%;border-collapse:collapse;font-size:16px}
+  .maptable th{text-align:left;color:var(--muted);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:1px;padding:8px 6px}
+  .maptable td{padding:6px;border-top:1px solid var(--line)}
+  .maptable td:first-child{font-weight:800;width:34%}
+  .maptable tr.live td:first-child{color:var(--green)}
+  .mapbtn{background:var(--panel2);border-radius:12px;padding:9px 12px;width:100%;text-align:left;font-weight:700;font-size:15px;min-height:42px}
+  .mapbtn.listen{background:var(--pink);animation:pulse .8s infinite alternate}
+  @keyframes pulse{from{opacity:1}to{opacity:.6}}
+  .small-btn{background:var(--panel2);border-radius:12px;padding:10px 16px;font-weight:800;font-size:15px}
+  .small-btn.danger{color:#ff8a9a}
+  .meter{height:12px;background:var(--bg);border-radius:999px;overflow:hidden;margin:8px 0 4px}
+  .meter div{height:100%;background:linear-gradient(90deg,var(--cyan),var(--pink));border-radius:999px}
+  .faq{background:var(--bg);border-radius:16px;padding:14px 16px;font-size:15px;line-height:1.55;color:var(--muted);margin-top:12px}
+  .faq b{color:var(--ink)}
 
   /* ---------- Sheets / dialogs ---------- */
   .scrim{position:fixed;inset:0;background:#05030dcc;z-index:1000;display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
   @media (min-width:700px){.scrim{align-items:center}}
   @keyframes fade{from{opacity:0}to{opacity:1}}
-  .sheet{background:var(--panel);width:min(520px,100%);border-radius:26px 26px 0 0;padding:24px 22px 28px;animation:up .2s ease-out}
+  .sheet{background:var(--panel);width:min(560px,100%);border-radius:26px 26px 0 0;padding:24px 22px 28px;animation:up .2s ease-out;max-height:92vh;overflow:auto}
   @media (min-width:700px){.sheet{border-radius:26px}}
   @keyframes up{from{transform:translateY(40px)}to{transform:none}}
   .sheet h3{margin:0 0 6px;font-size:23px}
-  .sheet p{margin:0 0 18px;color:var(--muted);font-size:16px;line-height:1.45}
+  .sheet p{margin:0 0 14px;color:var(--muted);font-size:16px;line-height:1.5}
   .sheet .opts{display:flex;flex-direction:column;gap:10px}
   .opt{background:var(--panel2);border-radius:16px;padding:16px 18px;font-size:18px;font-weight:700;text-align:left;display:flex;align-items:center;gap:14px}
-  .opt .e{font-size:24px;width:30px;text-align:center}
+  .opt .e{font-size:24px;width:30px;text-align:center;flex:none}
   .opt small{display:block;font-weight:500;color:var(--muted);font-size:14px;margin-top:2px}
   .opt.primary{background:var(--pink)}
   .opt.primary small{color:#ffe2f0}
   .opt.danger{color:#ff8a9a}
   .opt.sel{outline:3px solid var(--cyan)}
-  .sheet input{width:100%;background:var(--bg);border:2px solid var(--panel2);border-radius:14px;color:var(--ink);font:inherit;font-size:19px;padding:13px 15px;margin-bottom:14px;outline:none}
+  .opt:disabled{opacity:.4}
+  .sheet input[type=text]{width:100%;background:var(--bg);border:2px solid var(--panel2);border-radius:14px;color:var(--ink);font:inherit;font-size:19px;padding:13px 15px;margin-bottom:14px;outline:none}
+  .agree{display:flex;gap:12px;align-items:flex-start;background:var(--bg);border-radius:14px;padding:14px;margin:6px 0 16px;font-size:16px;line-height:1.45;cursor:pointer}
+  .agree input{width:24px;height:24px;flex:none;accent-color:var(--pink);margin-top:1px}
 
   .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#fff;color:#1b1230;font-weight:800;
     padding:13px 22px;border-radius:999px;z-index:3000;box-shadow:0 8px 30px #0008;font-size:16px;animation:fade .2s;max-width:90vw;text-align:center}
+
+  /* progress panel */
+  #progress{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);width:min(560px,calc(100vw - 24px));background:var(--panel);
+    border:2px solid var(--line);border-radius:22px;padding:16px 18px;z-index:2500;box-shadow:0 12px 40px #000a}
+  #progress .h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-weight:800;font-size:17px}
+  #progress .h span:last-child{color:var(--cyan);font-size:20px}
+  #progress .f{color:var(--muted);font-size:14px;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #progress .bar{height:14px;background:var(--bg);border-radius:999px;overflow:hidden;margin-top:10px}
+  #progress .bar div{height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--pink));border-radius:999px;transition:width .15s}
+  #progress .done{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+
+  /* whole-window drop overlay */
+  #dropOverlay{position:fixed;inset:0;z-index:2000;background:#120d24e6;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  #dropOverlay div{border:4px dashed var(--cyan);border-radius:32px;padding:50px 40px;text-align:center;font-weight:800;font-size:clamp(22px,3.4vw,32px)}
+  #dropOverlay div span{display:block;font-size:80px}
+  #dropOverlay small{display:block;color:var(--muted);font-size:16px;font-weight:500;margin-top:6px}
 
   /* ---------- Player ---------- */
   #player{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;z-index:500}
@@ -92,46 +180,129 @@
   .ptitle{flex:1;min-width:60px;font-weight:800;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);padding:0 6px}
   #game-wrap{flex:1;position:relative;min-height:0}
   #game{width:100%;height:100%}
+  #game .ejs_menu_bar, #game .ejs_context_menu{display:none !important}
+  body.no-onscreen #game .ejs_virtualGamepad_parent{display:none !important}
   .loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
     color:var(--muted);font-weight:800;font-size:19px;text-align:center;line-height:1.5;z-index:5;background:#000}
   .loading .spin{font-size:64px;animation:bob 1s ease-in-out infinite alternate}
   @keyframes bob{from{transform:translateY(-6px) rotate(-8deg)}to{transform:translateY(6px) rotate(8deg)}}
-  /* hide the engine's own toolbar & menus — our bar replaces them */
-  #game .ejs_menu_bar, #game .ejs_context_menu{display:none !important}
 </style>
 </head>
 <body>
 
-<!-- ================= LIBRARY ================= -->
-<div id="library">
-  <header>
-    <div class="logo"><span class="a">EASY</span> <span class="b">ARCADE</span></div>
-    <button class="big-btn" id="addBtn">＋ Add games</button>
-  </header>
+<!-- ================= HOME ================= -->
+<div id="home" class="view">
+  <div class="logo"><span class="a">EASY</span> <span class="b">ARCADE</span></div>
+  <div class="tag">Your arcade, made simple.</div>
+  <div class="home-cards">
+    <button class="hcard add" data-go="add"><span class="ic">➕</span><span class="t">Add games</span><span class="d">Bring in game files</span></button>
+    <button class="hcard" data-go="library"><span class="ic">🕹️</span><span class="t">Game library</span><span class="d" id="libCount">No games yet</span></button>
+    <button class="hcard" data-go="settings"><span class="ic">⚙️</span><span class="t">Settings</span><span class="d">Controllers, sound & storage</span></button>
+  </div>
+  <button class="continue hidden" id="continueBtn"></button>
+  <div class="legal-line">⚖️ Easy Arcade includes no games. Only add games you have the right to use. <button data-legal>Read more</button></div>
+</div>
 
+<!-- ================= ADD GAMES ================= -->
+<div id="add" class="view hidden">
+  <div class="topbar">
+    <button class="home-link" data-go="home">⬅ Home</button>
+    <h1>Add games</h1>
+  </div>
+  <div class="dropzone" id="dropzone" role="button" tabindex="0">
+    <div class="ic">📥</div>
+    <h2>Drop game files here</h2>
+    <p>Or tap below to choose them from your device.<br>You can pick or drop lots at once.</p>
+    <button class="big-btn" id="chooseBtn">📂 Choose files</button>
+  </div>
+  <div class="tips">
+    <div class="tip"><b>🎮 Games</b>Arcade game files in <b style="display:inline">.zip</b> format, keeping their original names (like <i>pacman.zip</i>).</div>
+    <div class="tip"><b>🖼️ Artwork</b>Add pictures (.png, .jpg, .webp) named after the game, like <i>pacman.png</i>, and they'll be used as the game's cover.</div>
+    <div class="tip"><b>🧩 Support files</b>Some games need extra files, like <i>neogeo.zip</i> for Neo Geo games. Add them here too and they're used automatically.</div>
+  </div>
+  <div class="notice">⚖️ <b>Only add games you have the right to use.</b> Most arcade games are still protected by copyright. Easy Arcade doesn't include or supply any games. <button data-legal style="background:none;color:var(--cyan);text-decoration:underline;font-weight:700;padding:0">Read more</button></div>
+  <input type="file" id="fileInput" multiple accept=".zip,application/zip,application/x-zip-compressed,image/png,image/jpeg,image/webp,image/gif" class="hidden">
+</div>
+
+<!-- ================= LIBRARY ================= -->
+<div id="library" class="view hidden">
+  <div class="topbar">
+    <button class="home-link" data-go="home">⬅ Home</button>
+    <h1>Game library</h1>
+    <button class="big-btn" data-go="add">＋ Add games</button>
+  </div>
   <div id="filled" class="hidden">
-    <div class="toolbar">
-      <input class="search" id="search" type="search" placeholder="🔍  Find a game…" autocomplete="off">
-    </div>
+    <input class="search" id="search" type="search" placeholder="🔍  Find a game…" autocomplete="off">
+    <div class="drop-hint">Tip: drop a picture onto a game to give it artwork.</div>
     <div class="grid" id="grid"></div>
     <div id="helpersWrap" class="hidden">
       <div class="section-label">Support files (used automatically)</div>
       <div class="helpers" id="helpers"></div>
     </div>
   </div>
-
   <div id="emptyState" class="empty hidden">
     <div class="icon">🕹️</div>
-    <h2>Your arcade is empty</h2>
-    <p>Add arcade game files from your tablet and they'll appear here as big buttons. Just tap one to play.</p>
-    <ol class="steps">
-      <li>Tap <b>Add games</b> and pick your <b>.zip</b> game files (you can pick lots at once).</li>
-      <li>Tap a game to play. On-screen controls appear, or connect a Bluetooth gamepad.</li>
-      <li>Press <b>Coin</b>, then <b>Start</b>, just like a real arcade machine.</li>
-    </ol>
-    <button class="big-btn" id="addBtn2">＋ Add games</button>
+    <h2>Your library is empty</h2>
+    <p>Add arcade game files and they'll appear here as big buttons. Just tap one to play.</p>
+    <button class="big-btn" data-go="add">＋ Add games</button>
   </div>
-  <input type="file" id="fileInput" multiple accept=".zip,application/zip,application/x-zip-compressed" class="hidden">
+  <input type="file" id="artInput" accept="image/png,image/jpeg,image/webp,image/gif" class="hidden">
+</div>
+
+<!-- ================= SETTINGS ================= -->
+<div id="settings" class="view hidden">
+  <div class="topbar">
+    <button class="home-link" data-go="home">⬅ Home</button>
+    <h1>Settings</h1>
+  </div>
+  <div class="set-wrap">
+    <div class="card">
+      <h2>🕹️ On-screen controls</h2>
+      <p>The touch joystick and buttons shown on touch screens.</p>
+      <div class="row"><div class="l">Show on-screen controls<small>Turn off if you always use a controller</small></div><label class="switch"><input type="checkbox" id="sOnscreen"><span></span></label></div>
+      <div class="row"><div class="l">Left-handed layout<small>Joystick on the right, buttons on the left</small></div><label class="switch"><input type="checkbox" id="sLeft"><span></span></label></div>
+    </div>
+
+    <div class="card">
+      <h2>🎮 Controller & keyboard</h2>
+      <p>Connect a Bluetooth or USB controller, then press any button on it so this page can see it. Tap a box below, then press the button or key you want to use.</p>
+      <div class="pads" id="pads"></div>
+      <table class="maptable">
+        <thead><tr><th>Action</th><th>Controller</th><th>Keyboard</th></tr></thead>
+        <tbody id="mapBody"></tbody>
+      </table>
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        <button class="small-btn" id="resetMap">↺ Reset to defaults</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🔊 Sound & games</h2>
+      <div class="row"><div class="l">Volume<small id="volTxt">80%</small></div><input type="range" id="sVol" min="0" max="100" step="5"></div>
+      <div class="row"><div class="l">Engine for new games<small>You can change it for any game from its ⋯ menu</small></div>
+        <div class="seg" id="sEngine"><button data-v="fbneo">FinalBurn Neo</button><button data-v="mame2003_plus">MAME 2003-Plus</button></div></div>
+    </div>
+
+    <div class="card">
+      <h2>💾 Storage</h2>
+      <p id="storeTxt">Checking…</p>
+      <div class="meter"><div id="storeBar" style="width:0"></div></div>
+      <div class="row"><div class="l">Protect my games from clean-up<small id="persistTxt">Checking…</small></div><button class="small-btn" id="persistBtn">Protect</button></div>
+      <div class="faq">
+        <b>Will my games still be here next time?</b><br>
+        Yes. There's no account or log-in, so your games, artwork and saves are stored in this browser on this device. They stay there when you close the app, sign out of other things or restart the device.<br><br>
+        They <b>will be lost</b> if you clear this browser's data or uninstall the browser. They also won't appear in a private/incognito window, a different browser or another device. On iPhone and iPad, Safari can clear website data after a few weeks unused, unless you add Easy Arcade to your home screen.
+      </div>
+      <div style="margin-top:16px"><button class="small-btn danger" id="wipeBtn">🗑️ Delete all games and saves</button></div>
+    </div>
+
+    <div class="card">
+      <h2>⚖️ About & legal</h2>
+      <p style="margin-bottom:10px">Easy Arcade is a front end for open-source emulators. It contains no games.</p>
+      <button class="small-btn" data-legal>Read the game rights notice</button>
+      <div class="faq">Built on <b>EmulatorJS</b> (GPL-3.0) with the <b>FinalBurn Neo</b> and <b>MAME 2003-Plus</b> engines, used under their non-commercial licences.</div>
+    </div>
+  </div>
 </div>
 
 <!-- ================= PLAYER ================= -->
@@ -147,11 +318,19 @@
   <div id="game-wrap"><div id="game"></div></div>
 </div>
 
+<div id="progress" class="hidden">
+  <div class="h"><span id="prTitle">Adding games…</span><span id="prPct">0%</span></div>
+  <div class="f" id="prFile"></div>
+  <div class="bar"><div id="prBar"></div></div>
+  <div class="done hidden" id="prDone"></div>
+</div>
+<div id="dropOverlay" class="hidden"><div><span>📥</span>Drop to add to your arcade<small id="dropSub">Game .zip files and artwork pictures</small></div></div>
+
 <script>
 (function(){
 "use strict";
 
-/* ---------------- Known names ---------------- */
+/* ================= Data ================= */
 const TITLES = {
   pacman:"Pac-Man",puckman:"Puck Man",mspacman:"Ms. Pac-Man",galaga:"Galaga",galaxian:"Galaxian",invaders:"Space Invaders",
   dkong:"Donkey Kong",dkongjr:"Donkey Kong Jr.",dkong3:"Donkey Kong 3",mario:"Mario Bros.",frogger:"Frogger",digdug:"Dig Dug",
@@ -183,23 +362,53 @@ const TITLES = {
   xmen:"X-Men",punkshot:"Punk Shot",gradius:"Gradius",nemesis:"Nemesis",salamand:"Salamander",
   outrun:"Out Run",shinobi:"Shinobi",altbeast:"Altered Beast",goldnaxe:"Golden Axe",tetrisse:"Tetris (Sega)",
   hangon:"Hang-On",spacharr:"Space Harrier",wb3:"Wonder Boy III",wboy:"Wonder Boy",bublbob2:"Bubble Symphony",
-  dduke:"Double Dragon",ddragon:"Double Dragon",ddragon2:"Double Dragon II",renegade:"Renegade",rtype:"R-Type",rtype2:"R-Type II",
+  ddragon:"Double Dragon",ddragon2:"Double Dragon II",renegade:"Renegade",rtype:"R-Type",rtype2:"R-Type II",
   bombrman:"Bomberman",snowbros:"Snow Bros.",toki:"Toki",raiden:"Raiden",cabal:"Cabal",galaga88:"Galaga '88",
-  rallyx:"Rally-X",newrallyx:"New Rally-X",polepos:"Pole Position",polepos2:"Pole Position II",dragnblz:"Dragon Blaze",
+  rallyx:"Rally-X",nrallyx:"New Rally-X",polepos:"Pole Position",polepos2:"Pole Position II",
   wwfsstar:"WWF Superstars",nbajam:"NBA Jam",mk:"Mortal Kombat",mk2:"Mortal Kombat II",smashtv:"Smash TV",totcarn:"Total Carnage",
   narc:"NARC",berzerk:"Berzerk",tron:"Tron",spyhunt:"Spy Hunter",tapper:"Tapper",sinistar:"Sinistar",
   gridlee:"Gridlee",robby:"Robby Roto",alienar:"Alien Arena",carpolo:"Car Polo",supertnk:"Super Tank",polyplay:"Poly-Play",
   sidetrac:"Side Trak",targ:"Targ",spectar:"Spectar",teetert:"Teeter Torture",starfire:"Star Fire",fax:"FAX"
 };
-/* Files other games need (BIOS / shared data). They're hidden from the tiles and loaded automatically. */
 const HELPERS = new Set(["neogeo","pgm","decocass","skns","nmk004","isgsm","ym2608","cchip","qsound","konamigx","stvbios","naomi","hng64","cpzn1","cpzn2","coh1000c","coh1001l","coh1002e","coh1002m","coh3002c","tps","acpsx","atpsx","taitofx1","bubsys","midssio","segasp","awbios","f355bios","airlbios","namcoc69","namcoc70","namcoc75","sfiii3n_bios","ar_bios","alg_bios","galgbios","crysbios"]);
-
 const ENGINES = {
   fbneo: {label:"FinalBurn Neo", desc:"Best for most classic games (recommended)"},
   mame2003_plus: {label:"MAME 2003-Plus", desc:"Try this if a game won't start"}
 };
+const IMG_RE = /\.(png|jpe?g|webp|gif)$/i;
 
-/* ---------------- Storage (IndexedDB) ---------------- */
+/* Controls: RetroPad input numbers used by the engines */
+const ACTIONS = [
+  {i:4,label:"Up"},{i:5,label:"Down"},{i:6,label:"Left"},{i:7,label:"Right"},
+  {i:2,label:"Coin"},{i:3,label:"Start"},
+  {i:0,label:"Button 1"},{i:8,label:"Button 2"},{i:1,label:"Button 3"},{i:9,label:"Button 4"},{i:10,label:"Button 5"},{i:11,label:"Button 6"}
+];
+const DEFAULT_PAD = {4:"DPAD_UP",5:"DPAD_DOWN",6:"DPAD_LEFT",7:"DPAD_RIGHT",2:"SELECT",3:"START",0:"BUTTON_1",8:"BUTTON_2",1:"BUTTON_3",9:"BUTTON_4",10:"LEFT_TOP_SHOULDER",11:"RIGHT_TOP_SHOULDER"};
+const DEFAULT_KEYS = {4:"up arrow",5:"down arrow",6:"left arrow",7:"right arrow",2:"5",3:"1",0:"z",8:"x",1:"a",9:"s",10:"q",11:"w"};
+const PAD_BUTTONS = ["BUTTON_1","BUTTON_2","BUTTON_3","BUTTON_4","LEFT_TOP_SHOULDER","RIGHT_TOP_SHOULDER","LEFT_BOTTOM_SHOULDER","RIGHT_BOTTOM_SHOULDER","SELECT","START","LEFT_STICK","RIGHT_STICK","DPAD_UP","DPAD_DOWN","DPAD_LEFT","DPAD_RIGHT"];
+const PAD_NAMES = {BUTTON_1:"A (bottom)",BUTTON_2:"B (right)",BUTTON_3:"X (left)",BUTTON_4:"Y (top)",LEFT_TOP_SHOULDER:"LB / L1",RIGHT_TOP_SHOULDER:"RB / R1",
+  LEFT_BOTTOM_SHOULDER:"LT / L2",RIGHT_BOTTOM_SHOULDER:"RT / R2",SELECT:"Select / Back",START:"Start / Menu",LEFT_STICK:"Left stick press",RIGHT_STICK:"Right stick press",
+  DPAD_UP:"D-pad ↑",DPAD_DOWN:"D-pad ↓",DPAD_LEFT:"D-pad ←",DPAD_RIGHT:"D-pad →",
+  "LEFT_STICK_X:+1":"Left stick →","LEFT_STICK_X:-1":"Left stick ←","LEFT_STICK_Y:+1":"Left stick ↓","LEFT_STICK_Y:-1":"Left stick ↑",
+  "RIGHT_STICK_X:+1":"Right stick →","RIGHT_STICK_X:-1":"Right stick ←","RIGHT_STICK_Y:+1":"Right stick ↓","RIGHT_STICK_Y:-1":"Right stick ↑"};
+const KEYMAP = {8:"backspace",9:"tab",13:"enter",16:"shift",17:"ctrl",18:"alt",32:"space",33:"page up",34:"page down",35:"end",36:"home",
+  37:"left arrow",38:"up arrow",39:"right arrow",40:"down arrow",45:"insert",46:"delete",
+  96:"numpad 0",97:"numpad 1",98:"numpad 2",99:"numpad 3",100:"numpad 4",101:"numpad 5",102:"numpad 6",103:"numpad 7",104:"numpad 8",105:"numpad 9",
+  186:"semi-colon",187:"equal sign",188:"comma",189:"dash",190:"period",191:"forward slash",192:"grave accent",219:"open bracket",220:"back slash",222:"single quote"};
+for(let c=48;c<=57;c++) KEYMAP[c]=String(c-48);
+for(let c=65;c<=90;c++) KEYMAP[c]=String.fromCharCode(c+32);
+for(let c=112;c<=123;c++) KEYMAP[c]="f"+(c-111);
+const KEY_NAMES = {"up arrow":"↑","down arrow":"↓","left arrow":"←","right arrow":"→","space":"Space","enter":"Enter","shift":"Shift","ctrl":"Ctrl","alt":"Alt","tab":"Tab"};
+
+/* ================= Settings ================= */
+function lsGet(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:JSON.parse(v); }catch(e){ return d; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+const settings = Object.assign({onscreen:true,leftHanded:false,volume:80,engine:"fbneo",pad:{},keys:{}}, lsGet("ea-settings",{}));
+settings.pad = Object.assign({}, DEFAULT_PAD, settings.pad);
+settings.keys = Object.assign({}, DEFAULT_KEYS, settings.keys);
+function saveSettings(){ lsSet("ea-settings", settings); }
+
+/* ================= Storage (IndexedDB) ================= */
 let db = null;
 function openDB(){
   return new Promise(res=>{
@@ -218,30 +427,25 @@ function tx(store, mode, fn){
     const out = fn(s);
     t.oncomplete = ()=>res(out && out.result !== undefined ? out.result : undefined);
     t.onerror = ()=>rej(t.error);
+    t.onabort = ()=>rej(t.error);
   });
 }
-const getAll = store => tx(store,"readonly",s=>s.getAll());
-const getOne = (store,id) => tx(store,"readonly",s=>s.get(id));
-const putOne = (store,v) => tx(store,"readwrite",s=>s.put(v));
-const delOne = (store,id) => tx(store,"readwrite",s=>s.delete(id));
+let memGames = [], memStates = {};
+async function listGames(){ return db ? await tx("games","readonly",s=>s.getAll()) : memGames; }
+async function saveGame(g){ if(db) await tx("games","readwrite",s=>s.put(g)); else { memGames = memGames.filter(x=>x.id!==g.id); memGames.push(g); } }
+async function removeGame(id){ if(db){ await tx("games","readwrite",s=>s.delete(id)); await tx("states","readwrite",s=>s.delete(id)); } else { memGames = memGames.filter(x=>x.id!==id); delete memStates[id]; } }
+async function getState(id){ return db ? await tx("states","readonly",s=>s.get(id)) : memStates[id]; }
+async function putState(v){ if(db) await tx("states","readwrite",s=>s.put(v)); else memStates[v.id]=v; }
+async function delState(id){ if(db) await tx("states","readwrite",s=>s.delete(id)); else delete memStates[id]; }
+async function stateIds(){ return db ? await tx("states","readonly",s=>s.getAllKeys()) : Object.keys(memStates); }
+async function wipeAll(){ if(db){ await tx("games","readwrite",s=>s.clear()); await tx("states","readwrite",s=>s.clear()); } memGames=[]; memStates={}; }
 
-let memGames = []; // fallback when IndexedDB is missing (games last until the page closes)
-let memStates = {};
-async function listGames(){ return db ? await getAll("games") : memGames; }
-async function saveGame(g){ if(db) await putOne("games",g); else { memGames = memGames.filter(x=>x.id!==g.id); memGames.push(g); } }
-async function removeGame(id){ if(db){ await delOne("games",id); await delOne("states",id); } else { memGames = memGames.filter(x=>x.id!==id); delete memStates[id]; } }
-async function getState(id){ return db ? await getOne("states",id) : memStates[id]; }
-async function putState(v){ if(db) await putOne("states",v); else memStates[v.id]=v; }
-async function stateIds(){ return db ? (await getAll("states")).map(s=>s.id) : Object.keys(memStates); }
-
-/* ---------------- Helpers ---------------- */
+/* ================= Helpers ================= */
 const $ = id => document.getElementById(id);
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
-function baseName(file){ return file.replace(/\.(zip|7z)$/i,"").toLowerCase(); }
-function prettify(b){
-  if(TITLES[b]) return TITLES[b];
-  return b.replace(/[_\-]+/g," ").replace(/\b\w/g,c=>c.toUpperCase());
-}
+function baseName(file){ return file.replace(/\.[a-z0-9]+$/i,"").toLowerCase(); }
+function norm(s){ return String(s).toLowerCase().replace(/[^a-z0-9]/g,""); }
+function prettify(b){ return TITLES[b] || b.replace(/[_\-]+/g," ").replace(/\b\w/g,c=>c.toUpperCase()); }
 function hash(s){ let h=2166136261; for(const c of s){ h^=c.charCodeAt(0); h=Math.imul(h,16777619);} return h>>>0; }
 const PALETTES = [["#ff4fa3","#7b2ff7"],["#3fe0ff","#2b4cff"],["#ffd23f","#ff6b3f"],["#55e39a","#118a7e"],["#ff6b6b","#a71d6f"],["#b388ff","#4527a0"],["#ff9f43","#d63031"],["#00d2d3","#5f27cd"]];
 function initials(t){
@@ -250,6 +454,7 @@ function initials(t){
   if(w.length===1) return w[0].slice(0,3).toUpperCase();
   return (w[0][0]+w[1][0]+(w[2]?w[2][0]:"")).toUpperCase();
 }
+function mb(n){ if(!n) return "0 MB"; return n>=1e9 ? (n/1e9).toFixed(1)+" GB" : n>=1e6 ? (n/1e6).toFixed(n>=1e8?0:1)+" MB" : Math.max(1,Math.round(n/1e3))+" KB"; }
 function ago(ts){
   if(!ts) return "Not played yet";
   const m = Math.round((Date.now()-ts)/60000);
@@ -258,20 +463,55 @@ function ago(ts){
   const d=Math.round(h/24); return "Played "+d+" day"+(d>1?"s":"")+" ago";
 }
 let toastT;
-function toast(msg){
+function toast(msg, ms){
   document.querySelectorAll(".toast").forEach(n=>n.remove());
   const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t);
-  clearTimeout(toastT); toastT=setTimeout(()=>t.remove(),2600);
+  clearTimeout(toastT); toastT=setTimeout(()=>t.remove(), ms||2600);
 }
 function sheet(html, onclick){
   const s=document.createElement("div"); s.className="scrim";
   s.innerHTML='<div class="sheet">'+html+'</div>';
-  s.addEventListener("click",e=>{ if(e.target===s){ s.remove(); return; } const b=e.target.closest("[data-act]"); if(b) onclick(b.dataset.act, s, b); });
+  s.addEventListener("click",e=>{ if(e.target===s){ s.remove(); return; } const b=e.target.closest("[data-act]"); if(b && !b.disabled) onclick(b.dataset.act, s, b); });
   document.body.appendChild(s);
   return s;
 }
 
-/* ---------------- Library UI ---------------- */
+/* Art: object-URL cache */
+const artUrls = new Map();
+function artUrl(g){
+  if(!g.art) return null;
+  const key = g.id+":"+(g.artAt||0);
+  if(!artUrls.has(key)){ for(const [k,u] of artUrls) if(k.startsWith(g.id+":")){ URL.revokeObjectURL(u); artUrls.delete(k); } artUrls.set(key, URL.createObjectURL(g.art)); }
+  return artUrls.get(key);
+}
+async function makeArt(file){
+  const url = URL.createObjectURL(file);
+  try{
+    const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+    const W=640, H=480, c=document.createElement("canvas"); c.width=W; c.height=H;
+    const g=c.getContext("2d"); g.fillStyle="#000"; g.fillRect(0,0,W,H);
+    const s=Math.max(W/img.naturalWidth, H/img.naturalHeight), w=img.naturalWidth*s, h=img.naturalHeight*s;
+    g.drawImage(img,(W-w)/2,(H-h)/2,w,h);
+    return await new Promise(res=>c.toBlob(b=>res(b),"image/jpeg",0.86));
+  } finally { URL.revokeObjectURL(url); }
+}
+
+/* ================= Views ================= */
+const VIEWS = ["home","add","library","settings"];
+function show(v){
+  if(!VIEWS.includes(v)) v="home";
+  VIEWS.forEach(x=>$(x).classList.toggle("hidden", x!==v));
+  if(v==="settings") enterSettings(); else leaveSettings();
+  window.scrollTo(0,0);
+}
+function go(v){ if(("#"+v)===location.hash || (v==="home" && !location.hash)) show(v); else location.hash = v==="home" ? "" : v; }
+window.addEventListener("hashchange", ()=>{ if($("player").classList.contains("hidden")) show(location.hash.slice(1)||"home"); });
+document.addEventListener("click", e=>{
+  const g=e.target.closest("[data-go]"); if(g){ go(g.dataset.go); return; }
+  if(e.target.closest("[data-legal]")) legalNotice();
+});
+
+/* ================= Library ================= */
 let games = [], saved = new Set();
 async function refresh(){
   games = await listGames();
@@ -280,27 +520,35 @@ async function refresh(){
 }
 function render(){
   const q = $("search").value.trim().toLowerCase();
-  const playable = games.filter(g=>!g.helper);
-  const helpers = games.filter(g=>g.helper);
+  const playable = games.filter(g=>!g.helper), helpers = games.filter(g=>g.helper);
+  $("libCount").textContent = playable.length ? playable.length+" game"+(playable.length>1?"s":"") : "No games yet";
+  const last = playable.filter(g=>g.lastPlayed).sort((a,b)=>b.lastPlayed-a.lastPlayed)[0];
+  const cb = $("continueBtn");
+  if(last){
+    const p = PALETTES[hash(last.id)%PALETTES.length], u = artUrl(last);
+    cb.innerHTML = '<span class="mini" style="'+(u?'background-image:url('+u+')':'background:linear-gradient(135deg,'+p[0]+','+p[1]+')')+'">'+(u?'':esc(initials(last.title)))+'</span><span>▶ Play '+esc(last.title)+'</span>';
+    cb.dataset.id = last.id; cb.classList.remove("hidden");
+  } else cb.classList.add("hidden");
+
   $("emptyState").classList.toggle("hidden", playable.length>0);
   $("filled").classList.toggle("hidden", playable.length===0 && helpers.length===0);
-  if(playable.length===0 && helpers.length>0) $("emptyState").classList.remove("hidden");
   const list = playable
     .filter(g=>!q || g.title.toLowerCase().includes(q) || g.id.includes(q))
     .sort((a,b)=>(b.lastPlayed||0)-(a.lastPlayed||0) || a.title.localeCompare(b.title));
   $("grid").innerHTML = list.map(g=>{
-    const p = PALETTES[hash(g.id)%PALETTES.length];
+    const p = PALETTES[hash(g.id)%PALETTES.length], u = artUrl(g);
+    const bg = u ? 'background-image:url('+u+')' : 'background:linear-gradient(135deg,'+p[0]+','+p[1]+')';
     return '<div class="tile" role="button" tabindex="0" data-id="'+esc(g.id)+'">'+
-      '<div class="art" style="background:linear-gradient(135deg,'+p[0]+','+p[1]+')">'+
+      '<div class="art'+(u?'':' gen')+'" style="'+bg+'">'+
         (saved.has(g.id)?'<span class="badge">💾 Saved</span>':'')+
-        '<span class="ini">'+esc(initials(g.title))+'</span><span class="play">▶</span></div>'+
+        (u?'':'<span class="ini">'+esc(initials(g.title))+'</span>')+'<span class="play">▶</span></div>'+
       '<div class="meta"><div class="title">'+esc(g.title)+'</div><div class="sub">'+esc(ago(g.lastPlayed))+'</div></div>'+
       '<button class="more" data-more="'+esc(g.id)+'" aria-label="Options">⋯</button></div>';
   }).join("") || '<p style="color:var(--muted);font-size:17px">No games match “'+esc(q)+'”.</p>';
   $("helpersWrap").classList.toggle("hidden", helpers.length===0);
   $("helpers").innerHTML = helpers.map(g=>'<span class="chip">🧩 '+esc(g.file)+' <button data-unhelp="'+esc(g.id)+'" title="Show as a game">↩</button><button data-del="'+esc(g.id)+'" title="Remove">✕</button></span>').join("");
 }
-
+$("continueBtn").onclick = ()=>choose(games.find(g=>g.id===$("continueBtn").dataset.id));
 $("grid").addEventListener("click", e=>{
   const more = e.target.closest("[data-more]");
   if(more){ e.stopPropagation(); gameMenu(games.find(g=>g.id===more.dataset.more)); return; }
@@ -313,40 +561,33 @@ $("helpers").addEventListener("click", async e=>{
   if(d){ await removeGame(d.dataset.del); refresh(); }
 });
 $("search").addEventListener("input", render);
-$("addBtn").onclick = $("addBtn2").onclick = ()=>$("fileInput").click();
 
-$("fileInput").addEventListener("change", async e=>{
-  const files=[...e.target.files]; e.target.value="";
-  let added=0, skipped=0;
-  for(const f of files){
-    if(!/\.zip$/i.test(f.name)){ skipped++; continue; }
-    const b = baseName(f.name);
-    const old = games.find(g=>g.id===b);
-    const g = Object.assign({}, old||{}, {
-      id:b, file:b+".zip", blob:f, size:f.size,
-      title: old ? old.title : prettify(b), helper: old ? old.helper : HELPERS.has(b),
-      engine: old ? old.engine : "fbneo", added: old ? old.added : Date.now()
-    });
-    try{ await saveGame(g); added++; }catch(err){ toast("Couldn't store "+f.name+" — your tablet may be low on space"); }
-  }
-  await refresh();
-  if(added) toast("Added "+added+" file"+(added>1?"s":"")+" 🎉");
-  if(skipped) setTimeout(()=>toast(skipped+" file"+(skipped>1?"s weren't":" wasn't")+" a .zip file and was skipped (unzip .7z files first)"),2700);
-  if(!db && added) setTimeout(()=>toast("Heads up: this browser can't keep games, so add them again next time"),5400);
+let artTarget = null;
+$("artInput").addEventListener("change", async e=>{
+  const f = e.target.files[0]; e.target.value="";
+  if(f && artTarget) await setArt(artTarget, f);
 });
+async function setArt(g, file){
+  try{ g.art = await makeArt(file); g.artAt = Date.now(); await saveGame(g); await refresh(); toast("Artwork added to "+g.title+" 🖼️"); }
+  catch(err){ toast("That picture couldn't be used — try a PNG or JPG"); }
+}
 
 function gameMenu(g){
   const engOpts = Object.keys(ENGINES).map(k=>'<button class="opt '+(g.engine===k?'sel':'')+'" data-act="eng:'+k+'"><span class="e">⚙️</span><span>'+ENGINES[k].label+'<small>'+ENGINES[k].desc+'</small></span></button>').join("");
-  sheet('<h3>'+esc(g.title)+'</h3><p>File: '+esc(g.file)+'</p><div class="opts">'+
+  sheet('<h3>'+esc(g.title)+'</h3><p>File: '+esc(g.file)+' · '+mb(g.size||0)+'</p><div class="opts">'+
+    '<button class="opt" data-act="art"><span class="e">🖼️</span><span>'+(g.art?'Change artwork':'Add artwork')+'<small>Pick a picture for this game\'s cover</small></span></button>'+
+    (g.art?'<button class="opt" data-act="noart"><span class="e">🎨</span>Remove artwork</button>':'')+
     '<button class="opt" data-act="rename"><span class="e">✏️</span>Rename</button>'+
     engOpts+
     '<button class="opt" data-act="helper"><span class="e">🧩</span><span>This is a support file<small>Needed by other games (e.g. a BIOS or parent set)</small></span></button>'+
     (saved.has(g.id)?'<button class="opt danger" data-act="delsave"><span class="e">🗑️</span>Delete saved progress</button>':'')+
     '<button class="opt danger" data-act="delete"><span class="e">🗑️</span>Remove game</button></div>',
   async (act, s)=>{
-    if(act==="rename"){
+    if(act==="art"){ s.remove(); artTarget=g; $("artInput").click(); }
+    else if(act==="noart"){ delete g.art; g.artAt=Date.now(); await saveGame(g); s.remove(); refresh(); }
+    else if(act==="rename"){
       s.remove();
-      const r = sheet('<h3>Rename game</h3><input id="rn" value="'+esc(g.title)+'" maxlength="60"><div class="opts"><button class="opt primary" data-act="ok">Save name</button></div>', async (a,s2)=>{
+      const r = sheet('<h3>Rename game</h3><input type="text" id="rn" value="'+esc(g.title)+'" maxlength="60"><div class="opts"><button class="opt primary" data-act="ok">Save name</button></div>', async (a,s2)=>{
         const v=s2.querySelector("#rn").value.trim(); if(v){ g.title=v; await saveGame(g); refresh(); } s2.remove();
       });
       const inp=r.querySelector("#rn"); inp.focus(); inp.select();
@@ -356,17 +597,292 @@ function gameMenu(g){
     } else if(act==="helper"){
       g.helper=true; await saveGame(g); s.remove(); refresh();
     } else if(act==="delsave"){
-      if(db) await delOne("states",g.id); else delete memStates[g.id];
-      s.remove(); refresh(); toast("Saved progress deleted");
+      await delState(g.id); s.remove(); refresh(); toast("Saved progress deleted");
     } else if(act==="delete"){
       s.remove();
-      sheet('<h3>Remove '+esc(g.title)+'?</h3><p>This removes it from Easy Arcade (the file on your tablet stays where it is).</p><div class="opts"><button class="opt danger" data-act="yes">Yes, remove it</button><button class="opt" data-act="no">Keep it</button></div>', async (a,s2)=>{
+      sheet('<h3>Remove '+esc(g.title)+'?</h3><p>This removes it and its saves from Easy Arcade. The original file on your device isn\'t touched.</p><div class="opts"><button class="opt danger" data-act="yes">Yes, remove it</button><button class="opt" data-act="no">Keep it</button></div>', async (a,s2)=>{
         if(a==="yes"){ await removeGame(g.id); refresh(); } s2.remove();
       });
     }
   });
 }
 
+/* ================= Legal ================= */
+const LEGAL_BODY =
+  '<p>Easy Arcade is only a player. <b style="color:var(--ink)">It doesn\'t include, download or supply any games.</b></p>'+
+  '<p>Most arcade games (ROMs) are still protected by copyright. Downloading, copying or sharing them without permission from the rights holder is illegal in the UK and many other countries. Owning the original machine or another copy of a game doesn\'t automatically give you the right to download a ROM of it.</p>'+
+  '<p>Only add game files that you have the legal right to use. That includes games that have been officially released for free, or that you\'ve bought or licensed for use with emulators. You are responsible for the files you add.</p>';
+function legalNotice(){
+  sheet('<h3>⚖️ Game rights notice</h3>'+LEGAL_BODY+'<div class="opts"><button class="opt" data-act="ok">OK</button></div>', (a,s)=>s.remove());
+}
+function ensureAgreed(){
+  return new Promise(res=>{
+    if(lsGet("ea-agreed",false)) return res(true);
+    const s = sheet('<h3>⚖️ Before you add games</h3>'+LEGAL_BODY+
+      '<label class="agree"><input type="checkbox" id="agreeBox"><span>I confirm that I own, or have permission to use, the games I add to Easy Arcade.</span></label>'+
+      '<div class="opts"><button class="opt primary" data-act="yes" id="agreeBtn" disabled><span class="e">✅</span>I agree, continue</button><button class="opt" data-act="no">Cancel</button></div>',
+      (a,s2)=>{ s2.remove(); if(a==="yes"){ lsSet("ea-agreed",true); res(true); } else res(false); });
+    s.querySelector("#agreeBox").addEventListener("change", e=>{ s.querySelector("#agreeBtn").disabled = !e.target.checked; });
+    s.addEventListener("click", e=>{ if(e.target===s) res(false); });
+  });
+}
+
+/* ================= Importing ================= */
+let importing = false;
+$("chooseBtn").onclick = e=>{ e.stopPropagation(); pick(); };
+$("dropzone").onclick = ()=>pick();
+async function pick(){ if(await ensureAgreed()) $("fileInput").click(); }
+$("fileInput").addEventListener("change", e=>{ const f=[...e.target.files]; e.target.value=""; if(f.length) importFiles(f, true); });
+
+function readWithProgress(file, onBytes){
+  return new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onprogress = e=>{ if(e.lengthComputable) onBytes(e.loaded); };
+    r.onload = ()=>{ onBytes(file.size); res(r.result); };
+    r.onerror = ()=>rej(r.error);
+    r.readAsArrayBuffer(file);
+  });
+}
+function setProgress(pct, title, file){
+  $("progress").classList.remove("hidden"); $("prDone").classList.add("hidden");
+  $("prBar").style.width = pct+"%"; $("prPct").textContent = Math.floor(pct)+"%";
+  if(title) $("prTitle").textContent = title;
+  if(file!==undefined) $("prFile").textContent = file;
+}
+let prHideT;
+function finishProgress(summary, buttons){
+  $("prBar").style.width="100%"; $("prPct").textContent="100%";
+  $("prTitle").textContent = summary.title; $("prFile").textContent = summary.detail;
+  const d=$("prDone"); d.innerHTML = buttons; d.classList.remove("hidden");
+  clearTimeout(prHideT); prHideT = setTimeout(()=>$("progress").classList.add("hidden"), 9000);
+}
+$("prDone").addEventListener("click", e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  $("progress").classList.add("hidden");
+  if(b.dataset.goto) go(b.dataset.goto);
+});
+
+async function importFiles(files, agreedAlready){
+  if(importing){ toast("Still adding the last batch — one moment"); return; }
+  if(!agreedAlready && !(await ensureAgreed())) return;
+  const zips = files.filter(f=>/\.zip$/i.test(f.name)), imgs = files.filter(f=>IMG_RE.test(f.name));
+  const other = files.filter(f=>!zips.includes(f) && !imgs.includes(f));
+  if(!zips.length && !imgs.length){ toast(other.some(f=>/\.7z$/i.test(f.name)) ? "Only .zip files work — unzip .7z files first" : "Those aren't game .zip files or pictures", 3500); return; }
+  importing = true;
+  const total = [...zips,...imgs].reduce((a,f)=>a+f.size,0) || 1;
+  let done = 0, added = 0, replaced = 0, support = 0, arts = 0, bad = [], unmatched = [];
+  const n = zips.length + imgs.length; let k = 0;
+  try{
+    for(const f of zips){
+      k++;
+      const label = (n>1 ? "Adding "+k+" of "+n : "Adding game")+"…";
+      setProgress(done/total*100, label, f.name+" · "+mb(f.size));
+      let buf;
+      try{ buf = await readWithProgress(f, b=>setProgress(Math.min(99,(done+b*0.9)/total*100), label)); }
+      catch(err){ bad.push(f.name+" (couldn't be read)"); done+=f.size; continue; }
+      const head = new Uint8Array(buf,0,Math.min(4,buf.byteLength));
+      if(!(head[0]===0x50 && head[1]===0x4b)){ bad.push(f.name+" (not a valid zip)"); done+=f.size; continue; }
+      setProgress(Math.min(99,(done+f.size*0.95)/total*100), label, "Saving "+f.name+"…");
+      const b = baseName(f.name), old = games.find(g=>g.id===b);
+      const g = Object.assign({}, old||{}, {
+        id:b, file:b+".zip", blob:new Blob([buf],{type:"application/zip"}), size:f.size,
+        title: old ? old.title : prettify(b), helper: old ? old.helper : HELPERS.has(b),
+        engine: old ? old.engine : settings.engine, added: old ? old.added : Date.now()
+      });
+      try{ await saveGame(g); old ? replaced++ : g.helper ? support++ : added++; if(!old) games.push(g); else Object.assign(old,g); }
+      catch(err){ bad.push(f.name+" (not enough storage space)"); }
+      done += f.size;
+    }
+    for(const f of imgs){
+      k++;
+      setProgress(done/total*100, (n>1 ? "Adding "+k+" of "+n : "Adding artwork")+"…", f.name);
+      const b = norm(baseName(f.name));
+      const g = games.find(x=>norm(x.id)===b) || games.find(x=>norm(x.title)===b);
+      if(!g){ unmatched.push(f.name); done+=f.size; continue; }
+      try{ g.art = await makeArt(f); g.artAt = Date.now(); await saveGame(g); arts++; }
+      catch(err){ bad.push(f.name+" (picture couldn't be read)"); }
+      done += f.size;
+    }
+  } finally { importing = false; }
+  await refresh();
+  const parts = [];
+  if(added) parts.push(added+" new game"+(added>1?"s":""));
+  if(replaced) parts.push(replaced+" updated");
+  if(support) parts.push(support+" support file"+(support>1?"s":""));
+  if(arts) parts.push(arts+" artwork"+(arts>1?"s":""));
+  let detail = [];
+  if(bad.length) detail.push("Skipped: "+bad.join(", "));
+  if(unmatched.length) detail.push(unmatched.length+" picture"+(unmatched.length>1?"s":"")+" didn't match a game name — use a game's ⋯ menu to add artwork");
+  if(other.length) detail.push(other.length+" other file"+(other.length>1?"s":"")+" ignored (only .zip games and pictures)");
+  if(!db && (added||replaced)) detail.push("This browser can't keep games, so you'll need to add them again next time");
+  finishProgress({title: parts.length ? "✅ Added "+parts.join(", ") : "Nothing was added", detail: detail.join(" · ") || "All done!"},
+    '<button class="small-btn" data-goto="library" style="background:var(--pink)">🕹️ Go to library</button><button class="small-btn">Close</button>');
+}
+
+/* Drag & drop anywhere */
+let dragDepth = 0;
+function hasFiles(e){ return e.dataTransfer && [...(e.dataTransfer.types||[])].includes("Files"); }
+window.addEventListener("dragenter", e=>{
+  if(!hasFiles(e) || !$("player").classList.contains("hidden")) return;
+  e.preventDefault(); dragDepth++;
+  $("dropOverlay").classList.remove("hidden");
+});
+window.addEventListener("dragover", e=>{
+  if(!hasFiles(e)) return;
+  e.preventDefault();
+  const tile = e.target.closest && e.target.closest(".tile");
+  document.querySelectorAll(".tile.droptarget").forEach(t=>{ if(t!==tile) t.classList.remove("droptarget"); });
+  if(tile){ tile.classList.add("droptarget"); $("dropOverlay").classList.add("hidden"); }
+  else if(!$("player").classList.contains("hidden")) {} else $("dropOverlay").classList.remove("hidden");
+});
+window.addEventListener("dragleave", e=>{
+  if(!hasFiles(e)) return;
+  dragDepth = Math.max(0, dragDepth-1);
+  if(dragDepth===0){ $("dropOverlay").classList.add("hidden"); document.querySelectorAll(".tile.droptarget").forEach(t=>t.classList.remove("droptarget")); }
+});
+window.addEventListener("drop", async e=>{
+  if(!hasFiles(e)) return;
+  e.preventDefault(); dragDepth = 0;
+  $("dropOverlay").classList.add("hidden");
+  const tile = e.target.closest && e.target.closest(".tile");
+  document.querySelectorAll(".tile.droptarget").forEach(t=>t.classList.remove("droptarget"));
+  if(!$("player").classList.contains("hidden")) return;
+  const files = [...e.dataTransfer.files];
+  if(!files.length) return;
+  if(tile && files.length===1 && IMG_RE.test(files[0].name)){
+    const g = games.find(x=>x.id===tile.dataset.id); if(g) await setArt(g, files[0]);
+    return;
+  }
+  importFiles(files, false);
+});
+$("dropzone").addEventListener("dragover", ()=>$("dropzone").classList.add("over"));
+$("dropzone").addEventListener("dragleave", ()=>$("dropzone").classList.remove("over"));
+$("dropzone").addEventListener("drop", ()=>$("dropzone").classList.remove("over"));
+
+/* ================= Settings ================= */
+let padLoop = null, listening = null;
+function padLabel(v){ return v ? (PAD_NAMES[v] || v.replace(/_/g," ").toLowerCase()) : "—"; }
+function keyLabel(v){ return v ? (KEY_NAMES[v] || (v.length===1 ? v.toUpperCase() : v.replace(/\b\w/g,c=>c.toUpperCase()))) : "—"; }
+function renderMap(){
+  $("mapBody").innerHTML = ACTIONS.map(a=>'<tr data-i="'+a.i+'"><td>'+a.label+'</td>'+
+    '<td><button class="mapbtn" data-pad="'+a.i+'">'+esc(padLabel(settings.pad[a.i]))+'</button></td>'+
+    '<td><button class="mapbtn" data-key="'+a.i+'">'+esc(keyLabel(settings.keys[a.i]))+'</button></td></tr>').join("");
+}
+function renderSettings(){
+  $("sOnscreen").checked = settings.onscreen;
+  $("sLeft").checked = settings.leftHanded;
+  $("sVol").value = settings.volume; $("volTxt").textContent = settings.volume+"%";
+  $("sEngine").querySelectorAll("button").forEach(b=>b.classList.toggle("on", b.dataset.v===settings.engine));
+  renderMap();
+  storageInfo();
+}
+$("sOnscreen").onchange = e=>{ settings.onscreen=e.target.checked; saveSettings(); };
+$("sLeft").onchange = e=>{ settings.leftHanded=e.target.checked; saveSettings(); };
+$("sVol").oninput = e=>{ settings.volume=+e.target.value; $("volTxt").textContent=settings.volume+"%"; saveSettings(); };
+$("sEngine").onclick = e=>{ const b=e.target.closest("button"); if(!b) return; settings.engine=b.dataset.v; saveSettings(); renderSettings(); };
+$("resetMap").onclick = ()=>{ settings.pad=Object.assign({},DEFAULT_PAD); settings.keys=Object.assign({},DEFAULT_KEYS); saveSettings(); stopListen(); renderMap(); toast("Controls reset"); };
+
+function stopListen(){ listening = null; document.querySelectorAll(".mapbtn.listen").forEach(b=>b.classList.remove("listen")); }
+$("mapBody").addEventListener("click", e=>{
+  const b = e.target.closest(".mapbtn"); if(!b) return;
+  const wasSame = b.classList.contains("listen");
+  stopListen(); renderMap();
+  if(wasSame) return;
+  const nb = $("mapBody").querySelector(b.dataset.pad!==undefined ? '[data-pad="'+b.dataset.pad+'"]' : '[data-key="'+b.dataset.key+'"]');
+  nb.classList.add("listen");
+  if(b.dataset.pad!==undefined){
+    nb.textContent = navigator.getGamepads && [...navigator.getGamepads()].some(Boolean) ? "Press a button…" : "Connect & press…";
+    listening = {type:"pad", i:+b.dataset.pad, base:snapshotPads(), t:Date.now()};
+  } else {
+    nb.textContent = "Press a key…";
+    listening = {type:"key", i:+b.dataset.key};
+  }
+});
+function assign(type, i, value){
+  const map = type==="pad" ? settings.pad : settings.keys;
+  for(const k in map) if(map[k]===value && +k!==i) map[k] = "";   // one action per button
+  map[i] = value; saveSettings(); stopListen(); renderMap();
+  toast(ACTIONS.find(a=>a.i===i).label+" → "+(type==="pad"?padLabel(value):keyLabel(value)));
+}
+window.addEventListener("keydown", e=>{
+  if(!listening || listening.type!=="key") return;
+  e.preventDefault(); e.stopPropagation();
+  if(e.keyCode===27){ stopListen(); renderMap(); return; }
+  const name = KEYMAP[e.keyCode]; if(name) assign("key", listening.i, name); else toast("That key can't be used");
+}, true);
+function snapshotPads(){
+  const out = {}; if(!navigator.getGamepads) return out;
+  for(const p of navigator.getGamepads()){ if(p) out[p.index] = {b:p.buttons.map(x=>x.pressed), a:[...p.axes]}; }
+  return out;
+}
+function padInputs(p){
+  const on = new Set();
+  p.buttons.forEach((b,i)=>{ if(b.pressed && PAD_BUTTONS[i]) on.add(PAD_BUTTONS[i]); });
+  ["LEFT_STICK_X","LEFT_STICK_Y","RIGHT_STICK_X","RIGHT_STICK_Y"].forEach((n,i)=>{ const v=p.axes[i]||0; if(v>0.6) on.add(n+":+1"); if(v<-0.6) on.add(n+":-1"); });
+  return on;
+}
+function renderPads(){
+  const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+  const html = pads.length ? pads.map((p,n)=>'<div class="pad"><span class="dot"></span>'+(n===0?'Player 1: ':'Controller '+(n+1)+': ')+esc(p.id.replace(/\(.*?Vendor.*?\)/i,"").trim()||"Controller")+'</div>').join("")
+    : '<div class="pad none"><span class="dot"></span>No controller found yet — connect one and press any button</div>';
+  if($("pads").innerHTML !== html) $("pads").innerHTML = html;
+  return pads;
+}
+function enterSettings(){
+  renderSettings();
+  if(padLoop) return;
+  const tick = ()=>{
+    const pads = renderPads();
+    const live = new Set(); for(const p of pads) padInputs(p).forEach(x=>live.add(x));
+    document.querySelectorAll("#mapBody tr").forEach(tr=>tr.classList.toggle("live", live.has(settings.pad[tr.dataset.i])));
+    if(listening && listening.type==="pad"){
+      for(const p of pads){
+        const base = listening.base[p.index] || {b:[],a:[]};
+        const fresh = [...padInputs(p)].filter(x=>{
+          const bi = PAD_BUTTONS.indexOf(x); if(bi>=0) return !base.b[bi];
+          const ax = ["LEFT_STICK_X","LEFT_STICK_Y","RIGHT_STICK_X","RIGHT_STICK_Y"].indexOf(x.split(":")[0]);
+          return Math.abs(base.a[ax]||0) < 0.5;
+        });
+        if(fresh.length){ assign("pad", listening.i, fresh[0]); break; }
+      }
+      if(listening && Date.now()-listening.t > 12000){ stopListen(); renderMap(); toast("No button pressed — tap the box to try again"); }
+    }
+    padLoop = requestAnimationFrame(tick);
+  };
+  padLoop = requestAnimationFrame(tick);
+}
+function leaveSettings(){ if(padLoop){ cancelAnimationFrame(padLoop); padLoop=null; } stopListen(); }
+window.addEventListener("gamepadconnected", e=>{ if(!$("settings").classList.contains("hidden")) toast("🎮 Controller connected"); });
+
+async function storageInfo(){
+  const total = games.reduce((a,g)=>a+(g.size||0)+(g.art?g.art.size:0),0);
+  const count = games.filter(g=>!g.helper).length;
+  let txt = count+" game"+(count===1?"":"s")+" stored on this device ("+mb(total)+").";
+  let pct = 0;
+  try{
+    if(navigator.storage && navigator.storage.estimate){
+      const est = await navigator.storage.estimate();
+      if(est.quota){ pct = Math.min(100, est.usage/est.quota*100); txt += " Using "+mb(est.usage)+" of about "+mb(est.quota)+" available to this app."; }
+    }
+  }catch(e){}
+  if(!db) txt = "⚠️ This browser isn't letting Easy Arcade store anything (for example in a private window), so games will disappear when you close it.";
+  $("storeTxt").textContent = txt; $("storeBar").style.width = Math.max(pct, total?1:0)+"%";
+  let persisted = false;
+  try{ persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false; }catch(e){}
+  $("persistTxt").textContent = persisted ? "✅ Protected — the browser won't remove your games to free up space" : "Asks the browser not to remove your games when the device is low on space";
+  $("persistBtn").classList.toggle("hidden", persisted || !(navigator.storage && navigator.storage.persist));
+}
+$("persistBtn").onclick = async ()=>{
+  let ok=false; try{ ok = await navigator.storage.persist(); }catch(e){}
+  toast(ok ? "Your games are now protected 🛡️" : "The browser said no. Adding Easy Arcade to your home screen usually helps", 3500);
+  storageInfo();
+};
+$("wipeBtn").onclick = ()=>{
+  sheet('<h3>Delete everything?</h3><p>This removes all games, artwork and saved progress from Easy Arcade on this device. It can\'t be undone.</p><div class="opts"><button class="opt danger" data-act="yes">Yes, delete everything</button><button class="opt" data-act="no">Cancel</button></div>',
+    async (a,s)=>{ s.remove(); if(a==="yes"){ await wipeAll(); await refresh(); storageInfo(); toast("Everything deleted"); } });
+};
+
+/* ================= Playing ================= */
 async function choose(g){
   if(!g) return;
   if(saved.has(g.id)){
@@ -377,16 +893,23 @@ async function choose(g){
   } else launch(g,false);
 }
 
-/* ---------------- Player ---------------- */
 let current = null, paused = false;
+function buildControls(){
+  const p0 = {};
+  for(let i=0;i<30;i++) p0[i] = {};
+  for(const a of ACTIONS) p0[a.i] = {value: settings.keys[a.i]||"", value2: settings.pad[a.i]||""};
+  Object.assign(p0, {16:{value2:"LEFT_STICK_X:+1"},17:{value2:"LEFT_STICK_X:-1"},18:{value2:"LEFT_STICK_Y:+1"},19:{value2:"LEFT_STICK_Y:-1"}});
+  return {0:p0, 1:{}, 2:{}, 3:{}};
+}
 
 async function launch(g, resume){
   current = g;
   g.lastPlayed = Date.now(); g.plays=(g.plays||0)+1; saveGame(g);
-  try{ sessionStorage.setItem("ea-return","1"); }catch(e){}
-  $("library").classList.add("hidden");
+  VIEWS.forEach(v=>$(v).classList.add("hidden"));
+  leaveSettings();
   $("player").classList.remove("hidden");
   $("pTitle").textContent = g.title;
+  document.body.classList.toggle("no-onscreen", !settings.onscreen);
 
   // Support files, plus other small sets in the library (clones often need their "parent" set alongside them)
   let budget = 64*1024*1024;
@@ -407,6 +930,9 @@ async function launch(g, resume){
   window.EJS_startOnLoaded = true;
   window.EJS_language = "en-US";
   window.EJS_disableAutoLang = false;
+  window.EJS_disableLocalStorage = true;   // our Settings page owns the controls
+  window.EJS_defaultControls = buildControls();
+  window.EJS_volume = settings.volume/100;
   window.EJS_externalFiles = ext;
   window.EJS_color = "#ff4fa3";
   window.EJS_backgroundColor = "#000000";
@@ -427,8 +953,11 @@ async function launch(g, resume){
   let pendingState = null;
   if(resume){ const st = await getState(g.id); if(st) pendingState = st.data; }
   window.EJS_onGameStart = ()=>{
+    const e = window.EJS_emulator;
+    try{ if(settings.leftHanded) e.toggleVirtualGamepadLeftHanded(true); }catch(err){}
+    try{ if(!settings.onscreen) e.toggleVirtualGamepad(false); }catch(err){}
     if(pendingState){
-      setTimeout(()=>{ try{ window.EJS_emulator.gameManager.loadState(pendingState); toast("Welcome back! 🎮"); }catch(e){ toast("Couldn't load your save"); } }, 300);
+      setTimeout(()=>{ try{ e.gameManager.loadState(pendingState); toast("Welcome back! 🎮"); }catch(err){ toast("Couldn't load your save"); } }, 300);
     }
     setTimeout(()=>toast("Tip: press Coin, then Start"), pendingState?2800:600);
   };
@@ -468,7 +997,6 @@ async function loadCore(eng, onProgress){
 }
 
 function emu(){ return window.EJS_emulator && window.EJS_emulator.started ? window.EJS_emulator : null; }
-
 $("pPause").onclick = ()=>{
   const e=emu(); if(!e) return;
   if(paused){ e.play(); paused=false; $("pPause").textContent="⏸ Pause"; }
@@ -491,10 +1019,8 @@ $("pLoad").onclick = async ()=>{
   try{ e.gameManager.loadState(st.data); toast("Loaded your save 📂"); }catch(err){ toast("Couldn't load the save"); }
 };
 $("pFull").onclick = async ()=>{
-  try{
-    if(document.fullscreenElement) await document.exitFullscreen();
-    else await $("player").requestFullscreen();
-  }catch(e){ toast("Full screen isn't allowed here"); }
+  try{ if(document.fullscreenElement) await document.exitFullscreen(); else await $("player").requestFullscreen(); }
+  catch(e){ toast("Full screen isn't allowed here"); }
 };
 $("pBack").onclick = ()=>{
   sheet('<h3>Leave '+esc(current.title)+'?</h3><p>Save first so you can carry on later.</p><div class="opts">'+
@@ -513,14 +1039,16 @@ $("pBack").onclick = ()=>{
     s.remove();
     // Our own Save handles progress; skip the engine's unload routine, which can crash the tab.
     try{ window.EJS_emulator.pause(); window.EJS_emulator.started = false; }catch(e){}
+    try{ history.replaceState(null, "", "#library"); }catch(e){}
     setTimeout(()=>location.reload(), a==="saveexit"?500:50);   // a fresh page is the cleanest way to stop the engine
   });
 };
 
-/* ---------------- Start ---------------- */
+/* ================= Start ================= */
 (async function(){
   db = await openDB();
   await refresh();
+  show(location.hash.slice(1)||"home");
   let auto=null; try{ auto=sessionStorage.getItem("ea-autoplay"); sessionStorage.removeItem("ea-autoplay"); }catch(e){}
   if(auto){ const g=games.find(x=>x.id===auto); if(g){ toast("Trying "+ENGINES[g.engine].label+"…"); launch(g,false); } }
 })();
