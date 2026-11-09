@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Easy Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#120d24; --panel:#1d1638; --panel2:#2a2150; --ink:#f4efff; --muted:#a99fcc;
+    --pink:#ff4fa3; --cyan:#3fe0ff; --yellow:#ffd23f; --green:#55e39a;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:'Nunito',system-ui,sans-serif}
+  body{overscroll-behavior:none}
+  button{font:inherit;cursor:pointer;border:0;color:inherit}
+  .hidden{display:none !important}
+
+  /* ---------- Library ---------- */
+  #library{min-height:100%;padding:22px clamp(14px,3vw,36px) 40px;
+    background:radial-gradient(ellipse at 50% -20%,#3b1f6e 0,transparent 60%),var(--bg)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+  .logo{font-family:'Press Start 2P',monospace;font-size:clamp(20px,3.6vw,32px);line-height:1.3;letter-spacing:1px}
+  .logo .a{color:var(--pink);text-shadow:0 0 18px #ff4fa380}
+  .logo .b{color:var(--cyan);text-shadow:0 0 18px #3fe0ff80}
+  .big-btn{display:inline-flex;align-items:center;gap:10px;background:var(--pink);color:#fff;font-weight:800;
+    font-size:clamp(17px,2.4vw,21px);padding:14px 24px;border-radius:18px;box-shadow:0 5px 0 #b0236c}
+  .big-btn:active{transform:translateY(3px);box-shadow:0 2px 0 #b0236c}
+  .big-btn.alt{background:var(--panel2);box-shadow:0 5px 0 #120d24}
+  .search{width:100%;max-width:420px;background:var(--panel);border:2px solid var(--panel2);border-radius:14px;
+    color:var(--ink);font:inherit;font-size:18px;padding:12px 16px;outline:none}
+  .search:focus{border-color:var(--cyan)}
+  .toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:22px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(clamp(150px,22vw,220px),1fr));gap:clamp(12px,2vw,20px)}
+  .tile{position:relative;background:var(--panel);border-radius:22px;overflow:hidden;text-align:left;padding:0;
+    box-shadow:0 6px 0 #0b0818;transition:transform .12s}
+  .tile:active{transform:scale(.97)}
+  .art{aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+  .art .ini{font-family:'Press Start 2P',monospace;font-size:clamp(26px,4.5vw,40px);color:#fff;text-shadow:0 4px 0 #0004;z-index:1}
+  .art::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,#ffffff10 0 2px,transparent 2px 5px)}
+  .art .play{position:absolute;right:10px;bottom:10px;width:46px;height:46px;border-radius:50%;background:#fff;
+    color:#111;display:flex;align-items:center;justify-content:center;font-size:20px;z-index:2;box-shadow:0 3px 8px #0006}
+  .meta{padding:12px 14px 14px}
+  .title{font-weight:800;font-size:clamp(16px,2vw,19px);line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .sub{color:var(--muted);font-size:14px;margin-top:4px}
+  .badge{position:absolute;left:10px;top:10px;background:var(--green);color:#0b2a1a;font-weight:800;font-size:13px;
+    padding:4px 10px;border-radius:999px;z-index:2}
+  .more{position:absolute;right:8px;top:8px;width:42px;height:42px;border-radius:12px;background:#0007;color:#fff;
+    font-size:22px;z-index:3;display:flex;align-items:center;justify-content:center}
+
+  .empty{max-width:640px;margin:7vh auto 0;text-align:center;background:var(--panel);border-radius:28px;padding:36px 26px}
+  .empty .icon{font-size:72px}
+  .empty h2{font-size:clamp(22px,3.2vw,30px);margin:10px 0 8px}
+  .empty p{color:var(--muted);font-size:17px;line-height:1.5;margin:0 0 22px}
+  .steps{text-align:left;max-width:460px;margin:0 auto 24px;color:var(--ink);font-size:16px;line-height:1.5}
+  .steps li{margin-bottom:6px}
+  .section-label{font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;font-size:13px;margin:28px 0 12px}
+  .helpers{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:var(--panel);border-radius:999px;padding:8px 14px;font-size:14px;color:var(--muted);display:flex;gap:8px;align-items:center}
+  .chip button{background:none;color:var(--muted);font-size:16px;padding:0 2px}
+
+  /* ---------- Sheets / dialogs ---------- */
+  .scrim{position:fixed;inset:0;background:#05030dcc;z-index:1000;display:flex;align-items:flex-end;justify-content:center;animation:fade .15s}
+  @media (min-width:700px){.scrim{align-items:center}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .sheet{background:var(--panel);width:min(520px,100%);border-radius:26px 26px 0 0;padding:24px 22px 28px;animation:up .2s ease-out}
+  @media (min-width:700px){.sheet{border-radius:26px}}
+  @keyframes up{from{transform:translateY(40px)}to{transform:none}}
+  .sheet h3{margin:0 0 6px;font-size:23px}
+  .sheet p{margin:0 0 18px;color:var(--muted);font-size:16px;line-height:1.45}
+  .sheet .opts{display:flex;flex-direction:column;gap:10px}
+  .opt{background:var(--panel2);border-radius:16px;padding:16px 18px;font-size:18px;font-weight:700;text-align:left;display:flex;align-items:center;gap:14px}
+  .opt .e{font-size:24px;width:30px;text-align:center}
+  .opt small{display:block;font-weight:500;color:var(--muted);font-size:14px;margin-top:2px}
+  .opt.primary{background:var(--pink)}
+  .opt.primary small{color:#ffe2f0}
+  .opt.danger{color:#ff8a9a}
+  .opt.sel{outline:3px solid var(--cyan)}
+  .sheet input{width:100%;background:var(--bg);border:2px solid var(--panel2);border-radius:14px;color:var(--ink);font:inherit;font-size:19px;padding:13px 15px;margin-bottom:14px;outline:none}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#fff;color:#1b1230;font-weight:800;
+    padding:13px 22px;border-radius:999px;z-index:3000;box-shadow:0 8px 30px #0008;font-size:16px;animation:fade .2s;max-width:90vw;text-align:center}
+
+  /* ---------- Player ---------- */
+  #player{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;z-index:500}
+  .pbar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0d0a1c;flex-wrap:nowrap;overflow-x:auto}
+  .pbtn{background:var(--panel2);border-radius:14px;padding:10px 14px;font-weight:800;font-size:16px;display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .pbtn.back{background:var(--pink)}
+  .pbtn:active{transform:scale(.96)}
+  .ptitle{flex:1;min-width:60px;font-weight:800;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);padding:0 6px}
+  #game-wrap{flex:1;position:relative;min-height:0}
+  #game{width:100%;height:100%}
+  .loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    color:var(--muted);font-weight:800;font-size:19px;text-align:center;line-height:1.5;z-index:5;background:#000}
+  .loading .spin{font-size:64px;animation:bob 1s ease-in-out infinite alternate}
+  @keyframes bob{from{transform:translateY(-6px) rotate(-8deg)}to{transform:translateY(6px) rotate(8deg)}}
+  /* hide the engine's own toolbar & menus — our bar replaces them */
+  #game .ejs_menu_bar, #game .ejs_context_menu{display:none !important}
+</style>
+</head>
+<body>
+
+<!-- ================= LIBRARY ================= -->
+<div id="library">
+  <header>
+    <div class="logo"><span class="a">EASY</span> <span class="b">ARCADE</span></div>
+    <button class="big-btn" id="addBtn">＋ Add games</button>
+  </header>
+
+  <div id="filled" class="hidden">
+    <div class="toolbar">
+      <input class="search" id="search" type="search" placeholder="🔍  Find a game…" autocomplete="off">
+    </div>
+    <div class="grid" id="grid"></div>
+    <div id="helpersWrap" class="hidden">
+      <div class="section-label">Support files (used automatically)</div>
+      <div class="helpers" id="helpers"></div>
+    </div>
+  </div>
+
+  <div id="emptyState" class="empty hidden">
+    <div class="icon">🕹️</div>
+    <h2>Your arcade is empty</h2>
+    <p>Add arcade game files from your tablet and they'll appear here as big buttons. Just tap one to play.</p>
+    <ol class="steps">
+      <li>Tap <b>Add games</b> and pick your <b>.zip</b> game files (you can pick lots at once).</li>
+      <li>Tap a game to play. On-screen controls appear, or connect a Bluetooth gamepad.</li>
+      <li>Press <b>Coin</b>, then <b>Start</b>, just like a real arcade machine.</li>
+    </ol>
+    <button class="big-btn" id="addBtn2">＋ Add games</button>
+  </div>
+  <input type="file" id="fileInput" multiple accept=".zip,application/zip,application/x-zip-compressed" class="hidden">
+</div>
+
+<!-- ================= PLAYER ================= -->
+<div id="player" class="hidden">
+  <div class="pbar">
+    <button class="pbtn back" id="pBack">⬅ Back</button>
+    <div class="ptitle" id="pTitle"></div>
+    <button class="pbtn" id="pPause">⏸ Pause</button>
+    <button class="pbtn" id="pSave">💾 Save</button>
+    <button class="pbtn" id="pLoad">📂 Load</button>
+    <button class="pbtn" id="pFull">⛶</button>
+  </div>
+  <div id="game-wrap"><div id="game"></div></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ---------------- Known names ---------------- */
+const TITLES = {
+  pacman:"Pac-Man",puckman:"Puck Man",mspacman:"Ms. Pac-Man",galaga:"Galaga",galaxian:"Galaxian",invaders:"Space Invaders",
+  dkong:"Donkey Kong",dkongjr:"Donkey Kong Jr.",dkong3:"Donkey Kong 3",mario:"Mario Bros.",frogger:"Frogger",digdug:"Dig Dug",
+  centiped:"Centipede",milliped:"Millipede",asteroid:"Asteroids",astdelux:"Asteroids Deluxe",missile:"Missile Command",
+  defender:"Defender",robotron:"Robotron: 2084",joust:"Joust",stargate:"Stargate",qbert:"Q*bert",tempest:"Tempest",
+  bzone:"Battlezone",btime:"BurgerTime",bublbobl:"Bubble Bobble",rainbow:"Rainbow Islands",tetris:"Tetris",atetris:"Tetris (Atari)",
+  "1942":"1942","1943":"1943: The Battle of Midway","1944":"1944: The Loop Master",xevious:"Xevious",scramble:"Scramble",
+  kungfum:"Kung-Fu Master",gng:"Ghosts'n Goblins",ghouls:"Ghouls'n Ghosts",commando:"Commando",ikari:"Ikari Warriors",
+  gauntlet:"Gauntlet",paperboy:"Paperboy",marble:"Marble Madness",rampage:"Rampage",arkanoid:"Arkanoid",bombjack:"Bomb Jack",
+  pengo:"Pengo",mappy:"Mappy",ladybug:"Lady Bug",zaxxon:"Zaxxon",phoenix:"Phoenix",pooyan:"Pooyan",timeplt:"Time Pilot",
+  gyruss:"Gyruss",junglek:"Jungle King",elevator:"Elevator Action",bagman:"Bagman",mrdo:"Mr. Do!",
+  sf2:"Street Fighter II",sf2ce:"Street Fighter II': Champion Edition",sf2hf:"Street Fighter II Turbo",ssf2:"Super Street Fighter II",
+  ssf2t:"Super Street Fighter II Turbo",sfa:"Street Fighter Alpha",sfa2:"Street Fighter Alpha 2",sfa3:"Street Fighter Alpha 3",
+  ffight:"Final Fight",captcomm:"Captain Commando",knights:"Knights of the Round",dino:"Cadillacs and Dinosaurs",
+  punisher:"The Punisher",strider:"Strider",forgottn:"Forgotten Worlds",mercs:"Mercs",willow:"Willow",kod:"The King of Dragons",
+  "1941":"1941: Counter Attack",mtwins:"Mega Twins",nemo:"Nemo",msword:"Magic Sword",varth:"Varth",pang:"Pang",
+  pnickj:"Pnickies",cawing:"Carrier Air Wing",unsquad:"U.N. Squadron",xmcota:"X-Men: Children of the Atom",
+  mshvsf:"Marvel Super Heroes vs. Street Fighter",mvsc:"Marvel vs. Capcom",avsp:"Alien vs. Predator",ddtod:"Dungeons & Dragons: Tower of Doom",
+  ddsom:"Dungeons & Dragons: Shadow over Mystara",dstlk:"Darkstalkers",nwarr:"Night Warriors",spf2t:"Super Puzzle Fighter II Turbo",
+  mslug:"Metal Slug",mslug2:"Metal Slug 2",mslug3:"Metal Slug 3",mslugx:"Metal Slug X",mslug4:"Metal Slug 4",mslug5:"Metal Slug 5",
+  kof94:"The King of Fighters '94",kof95:"The King of Fighters '95",kof96:"The King of Fighters '96",kof97:"The King of Fighters '97",
+  kof98:"The King of Fighters '98",kof99:"The King of Fighters '99",kof2000:"The King of Fighters 2000",kof2002:"The King of Fighters 2002",
+  samsho:"Samurai Shodown",samsho2:"Samurai Shodown II",fatfury1:"Fatal Fury",fatfury2:"Fatal Fury 2",rbff1:"Real Bout Fatal Fury",
+  garou:"Garou: Mark of the Wolves",lastblad:"The Last Blade",puzzledp:"Puzzle De Pon!",bstars:"Baseball Stars",
+  nam1975:"NAM-1975",magdrop2:"Magical Drop II",magdrop3:"Magical Drop III",twinspri:"Twinkle Star Sprites",blazstar:"Blazing Star",
+  pulstar:"Pulstar",shocktro:"Shock Troopers",sengoku:"Sengoku",bjourney:"Blue's Journey",neobombe:"Neo Bomberman",
+  turfmast:"Neo Turf Masters",wh2:"World Heroes 2",aof:"Art of Fighting",ncombat:"Ninja Combat",kotm:"King of the Monsters",
+  tmnt:"Teenage Mutant Ninja Turtles",tmnt2:"TMNT: Turtles in Time",simpsons:"The Simpsons",ssriders:"Sunset Riders",
+  xmen:"X-Men",punkshot:"Punk Shot",gradius:"Gradius",nemesis:"Nemesis",salamand:"Salamander",
+  outrun:"Out Run",shinobi:"Shinobi",altbeast:"Altered Beast",goldnaxe:"Golden Axe",tetrisse:"Tetris (Sega)",
+  hangon:"Hang-On",spacharr:"Space Harrier",wb3:"Wonder Boy III",wboy:"Wonder Boy",bublbob2:"Bubble Symphony",
+  dduke:"Double Dragon",ddragon:"Double Dragon",ddragon2:"Double Dragon II",renegade:"Renegade",rtype:"R-Type",rtype2:"R-Type II",
+  bombrman:"Bomberman",snowbros:"Snow Bros.",toki:"Toki",raiden:"Raiden",cabal:"Cabal",galaga88:"Galaga '88",
+  rallyx:"Rally-X",newrallyx:"New Rally-X",polepos:"Pole Position",polepos2:"Pole Position II",dragnblz:"Dragon Blaze",
+  wwfsstar:"WWF Superstars",nbajam:"NBA Jam",mk:"Mortal Kombat",mk2:"Mortal Kombat II",smashtv:"Smash TV",totcarn:"Total Carnage",
+  narc:"NARC",berzerk:"Berzerk",tron:"Tron",spyhunt:"Spy Hunter",tapper:"Tapper",sinistar:"Sinistar",
+  gridlee:"Gridlee",robby:"Robby Roto",alienar:"Alien Arena",carpolo:"Car Polo",supertnk:"Super Tank",polyplay:"Poly-Play",
+  sidetrac:"Side Trak",targ:"Targ",spectar:"Spectar",teetert:"Teeter Torture",starfire:"Star Fire",fax:"FAX"
+};
+/* Files other games need (BIOS / shared data). They're hidden from the tiles and loaded automatically. */
+const HELPERS = new Set(["neogeo","pgm","decocass","skns","nmk004","isgsm","ym2608","cchip","qsound","konamigx","stvbios","naomi","hng64","cpzn1","cpzn2","coh1000c","coh1001l","coh1002e","coh1002m","coh3002c","tps","acpsx","atpsx","taitofx1","bubsys","midssio","segasp","awbios","f355bios","airlbios","namcoc69","namcoc70","namcoc75","sfiii3n_bios","ar_bios","alg_bios","galgbios","crysbios"]);
+
+const ENGINES = {
+  fbneo: {label:"FinalBurn Neo", desc:"Best for most classic games (recommended)"},
+  mame2003_plus: {label:"MAME 2003-Plus", desc:"Try this if a game won't start"}
+};
+
+/* ---------------- Storage (IndexedDB) ---------------- */
+let db = null;
+function openDB(){
+  return new Promise(res=>{
+    try{
+      const r = indexedDB.open("easy-arcade", 1);
+      r.onupgradeneeded = ()=>{ const d=r.result; d.createObjectStore("games",{keyPath:"id"}); d.createObjectStore("states",{keyPath:"id"}); };
+      r.onsuccess = ()=>res(r.result);
+      r.onerror = ()=>res(null);
+    }catch(e){ res(null); }
+  });
+}
+function tx(store, mode, fn){
+  return new Promise((res,rej)=>{
+    if(!db) return rej(new Error("no storage"));
+    const t = db.transaction(store, mode), s = t.objectStore(store);
+    const out = fn(s);
+    t.oncomplete = ()=>res(out && out.result !== undefined ? out.result : undefined);
+    t.onerror = ()=>rej(t.error);
+  });
+}
+const getAll = store => tx(store,"readonly",s=>s.getAll());
+const getOne = (store,id) => tx(store,"readonly",s=>s.get(id));
+const putOne = (store,v) => tx(store,"readwrite",s=>s.put(v));
+const delOne = (store,id) => tx(store,"readwrite",s=>s.delete(id));
+
+let memGames = []; // fallback when IndexedDB is missing (games last until the page closes)
+let memStates = {};
+async function listGames(){ return db ? await getAll("games") : memGames; }
+async function saveGame(g){ if(db) await putOne("games",g); else { memGames = memGames.filter(x=>x.id!==g.id); memGames.push(g); } }
+async function removeGame(id){ if(db){ await delOne("games",id); await delOne("states",id); } else { memGames = memGames.filter(x=>x.id!==id); delete memStates[id]; } }
+async function getState(id){ return db ? await getOne("states",id) : memStates[id]; }
+async function putState(v){ if(db) await putOne("states",v); else memStates[v.id]=v; }
+async function stateIds(){ return db ? (await getAll("states")).map(s=>s.id) : Object.keys(memStates); }
+
+/* ---------------- Helpers ---------------- */
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function baseName(file){ return file.replace(/\.(zip|7z)$/i,"").toLowerCase(); }
+function prettify(b){
+  if(TITLES[b]) return TITLES[b];
+  return b.replace(/[_\-]+/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+}
+function hash(s){ let h=2166136261; for(const c of s){ h^=c.charCodeAt(0); h=Math.imul(h,16777619);} return h>>>0; }
+const PALETTES = [["#ff4fa3","#7b2ff7"],["#3fe0ff","#2b4cff"],["#ffd23f","#ff6b3f"],["#55e39a","#118a7e"],["#ff6b6b","#a71d6f"],["#b388ff","#4527a0"],["#ff9f43","#d63031"],["#00d2d3","#5f27cd"]];
+function initials(t){
+  const w = t.replace(/[^A-Za-z0-9 ]/g," ").split(/\s+/).filter(Boolean);
+  if(!w.length) return "?";
+  if(w.length===1) return w[0].slice(0,3).toUpperCase();
+  return (w[0][0]+w[1][0]+(w[2]?w[2][0]:"")).toUpperCase();
+}
+function ago(ts){
+  if(!ts) return "Not played yet";
+  const m = Math.round((Date.now()-ts)/60000);
+  if(m<1) return "Played just now"; if(m<60) return "Played "+m+" min ago";
+  const h=Math.round(m/60); if(h<24) return "Played "+h+"h ago";
+  const d=Math.round(h/24); return "Played "+d+" day"+(d>1?"s":"")+" ago";
+}
+let toastT;
+function toast(msg){
+  document.querySelectorAll(".toast").forEach(n=>n.remove());
+  const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t);
+  clearTimeout(toastT); toastT=setTimeout(()=>t.remove(),2600);
+}
+function sheet(html, onclick){
+  const s=document.createElement("div"); s.className="scrim";
+  s.innerHTML='<div class="sheet">'+html+'</div>';
+  s.addEventListener("click",e=>{ if(e.target===s){ s.remove(); return; } const b=e.target.closest("[data-act]"); if(b) onclick(b.dataset.act, s, b); });
+  document.body.appendChild(s);
+  return s;
+}
+
+/* ---------------- Library UI ---------------- */
+let games = [], saved = new Set();
+async function refresh(){
+  games = await listGames();
+  saved = new Set(await stateIds());
+  render();
+}
+function render(){
+  const q = $("search").value.trim().toLowerCase();
+  const playable = games.filter(g=>!g.helper);
+  const helpers = games.filter(g=>g.helper);
+  $("emptyState").classList.toggle("hidden", playable.length>0);
+  $("filled").classList.toggle("hidden", playable.length===0 && helpers.length===0);
+  if(playable.length===0 && helpers.length>0) $("emptyState").classList.remove("hidden");
+  const list = playable
+    .filter(g=>!q || g.title.toLowerCase().includes(q) || g.id.includes(q))
+    .sort((a,b)=>(b.lastPlayed||0)-(a.lastPlayed||0) || a.title.localeCompare(b.title));
+  $("grid").innerHTML = list.map(g=>{
+    const p = PALETTES[hash(g.id)%PALETTES.length];
+    return '<div class="tile" role="button" tabindex="0" data-id="'+esc(g.id)+'">'+
+      '<div class="art" style="background:linear-gradient(135deg,'+p[0]+','+p[1]+')">'+
+        (saved.has(g.id)?'<span class="badge">💾 Saved</span>':'')+
+        '<span class="ini">'+esc(initials(g.title))+'</span><span class="play">▶</span></div>'+
+      '<div class="meta"><div class="title">'+esc(g.title)+'</div><div class="sub">'+esc(ago(g.lastPlayed))+'</div></div>'+
+      '<button class="more" data-more="'+esc(g.id)+'" aria-label="Options">⋯</button></div>';
+  }).join("") || '<p style="color:var(--muted);font-size:17px">No games match “'+esc(q)+'”.</p>';
+  $("helpersWrap").classList.toggle("hidden", helpers.length===0);
+  $("helpers").innerHTML = helpers.map(g=>'<span class="chip">🧩 '+esc(g.file)+' <button data-unhelp="'+esc(g.id)+'" title="Show as a game">↩</button><button data-del="'+esc(g.id)+'" title="Remove">✕</button></span>').join("");
+}
+
+$("grid").addEventListener("click", e=>{
+  const more = e.target.closest("[data-more]");
+  if(more){ e.stopPropagation(); gameMenu(games.find(g=>g.id===more.dataset.more)); return; }
+  const tile = e.target.closest(".tile");
+  if(tile) choose(games.find(g=>g.id===tile.dataset.id));
+});
+$("helpers").addEventListener("click", async e=>{
+  const u=e.target.closest("[data-unhelp]"), d=e.target.closest("[data-del]");
+  if(u){ const g=games.find(x=>x.id===u.dataset.unhelp); g.helper=false; await saveGame(g); refresh(); }
+  if(d){ await removeGame(d.dataset.del); refresh(); }
+});
+$("search").addEventListener("input", render);
+$("addBtn").onclick = $("addBtn2").onclick = ()=>$("fileInput").click();
+
+$("fileInput").addEventListener("change", async e=>{
+  const files=[...e.target.files]; e.target.value="";
+  let added=0, skipped=0;
+  for(const f of files){
+    if(!/\.zip$/i.test(f.name)){ skipped++; continue; }
+    const b = baseName(f.name);
+    const old = games.find(g=>g.id===b);
+    const g = Object.assign({}, old||{}, {
+      id:b, file:b+".zip", blob:f, size:f.size,
+      title: old ? old.title : prettify(b), helper: old ? old.helper : HELPERS.has(b),
+      engine: old ? old.engine : "fbneo", added: old ? old.added : Date.now()
+    });
+    try{ await saveGame(g); added++; }catch(err){ toast("Couldn't store "+f.name+" — your tablet may be low on space"); }
+  }
+  await refresh();
+  if(added) toast("Added "+added+" file"+(added>1?"s":"")+" 🎉");
+  if(skipped) setTimeout(()=>toast(skipped+" file"+(skipped>1?"s weren't":" wasn't")+" a .zip file and was skipped (unzip .7z files first)"),2700);
+  if(!db && added) setTimeout(()=>toast("Heads up: this browser can't keep games, so add them again next time"),5400);
+});
+
+function gameMenu(g){
+  const engOpts = Object.keys(ENGINES).map(k=>'<button class="opt '+(g.engine===k?'sel':'')+'" data-act="eng:'+k+'"><span class="e">⚙️</span><span>'+ENGINES[k].label+'<small>'+ENGINES[k].desc+'</small></span></button>').join("");
+  sheet('<h3>'+esc(g.title)+'</h3><p>File: '+esc(g.file)+'</p><div class="opts">'+
+    '<button class="opt" data-act="rename"><span class="e">✏️</span>Rename</button>'+
+    engOpts+
+    '<button class="opt" data-act="helper"><span class="e">🧩</span><span>This is a support file<small>Needed by other games (e.g. a BIOS or parent set)</small></span></button>'+
+    (saved.has(g.id)?'<button class="opt danger" data-act="delsave"><span class="e">🗑️</span>Delete saved progress</button>':'')+
+    '<button class="opt danger" data-act="delete"><span class="e">🗑️</span>Remove game</button></div>',
+  async (act, s)=>{
+    if(act==="rename"){
+      s.remove();
+      const r = sheet('<h3>Rename game</h3><input id="rn" value="'+esc(g.title)+'" maxlength="60"><div class="opts"><button class="opt primary" data-act="ok">Save name</button></div>', async (a,s2)=>{
+        const v=s2.querySelector("#rn").value.trim(); if(v){ g.title=v; await saveGame(g); refresh(); } s2.remove();
+      });
+      const inp=r.querySelector("#rn"); inp.focus(); inp.select();
+      inp.addEventListener("keydown",ev=>{ if(ev.key==="Enter") r.querySelector('[data-act="ok"]').click(); });
+    } else if(act.startsWith("eng:")){
+      g.engine=act.slice(4); await saveGame(g); s.remove(); toast(g.title+" will use "+ENGINES[g.engine].label);
+    } else if(act==="helper"){
+      g.helper=true; await saveGame(g); s.remove(); refresh();
+    } else if(act==="delsave"){
+      if(db) await delOne("states",g.id); else delete memStates[g.id];
+      s.remove(); refresh(); toast("Saved progress deleted");
+    } else if(act==="delete"){
+      s.remove();
+      sheet('<h3>Remove '+esc(g.title)+'?</h3><p>This removes it from Easy Arcade (the file on your tablet stays where it is).</p><div class="opts"><button class="opt danger" data-act="yes">Yes, remove it</button><button class="opt" data-act="no">Keep it</button></div>', async (a,s2)=>{
+        if(a==="yes"){ await removeGame(g.id); refresh(); } s2.remove();
+      });
+    }
+  });
+}
+
+async function choose(g){
+  if(!g) return;
+  if(saved.has(g.id)){
+    sheet('<h3>'+esc(g.title)+'</h3><p>You have saved progress for this game.</p><div class="opts">'+
+      '<button class="opt primary" data-act="cont"><span class="e">▶</span><span>Continue<small>Pick up where you left off</small></span></button>'+
+      '<button class="opt" data-act="new"><span class="e">✨</span><span>Start fresh<small>Your save is kept until you save again</small></span></button></div>',
+      (a,s)=>{ s.remove(); launch(g, a==="cont"); });
+  } else launch(g,false);
+}
+
+/* ---------------- Player ---------------- */
+let current = null, paused = false;
+
+async function launch(g, resume){
+  current = g;
+  g.lastPlayed = Date.now(); g.plays=(g.plays||0)+1; saveGame(g);
+  try{ sessionStorage.setItem("ea-return","1"); }catch(e){}
+  $("library").classList.add("hidden");
+  $("player").classList.remove("hidden");
+  $("pTitle").textContent = g.title;
+
+  // Support files, plus other small sets in the library (clones often need their "parent" set alongside them)
+  let budget = 64*1024*1024;
+  const helpers = games.filter(x=>x.id!==g.id && (x.helper || (x.size||0) <= 3*1024*1024))
+    .sort((a,b)=>(b.helper?1:0)-(a.helper?1:0))
+    .filter(x=>{ if(x.helper) return true; if((x.size||0)>budget) return false; budget-=(x.size||0); return true; });
+  const ext = {};
+  for(const h of helpers){ ext["/"+h.file]=h.blob; ext["/home/web_user/retroarch/system/"+h.file]=h.blob; ext["/home/web_user/retroarch/system/fbneo/"+h.file]=h.blob; }
+
+  window.EJS_player = "#game";
+  window.EJS_core = g.engine || "fbneo";
+  window.EJS_gameUrl = g.blob;
+  window.EJS_gameName = g.file;          // arcade engines need the original set name, e.g. pacman.zip
+  window.EJS_gameID = g.id;
+  window.EJS_pathtodata = "ejs/data/";
+  window.EJS_forceLegacyCores = true;
+  window.EJS_threads = false;
+  window.EJS_startOnLoaded = true;
+  window.EJS_language = "en-US";
+  window.EJS_disableAutoLang = false;
+  window.EJS_externalFiles = ext;
+  window.EJS_color = "#ff4fa3";
+  window.EJS_backgroundColor = "#000000";
+  window.EJS_defaultOptions = {"save-state-location":"browser"};
+  window.EJS_Buttons = {playPause:false,play:false,pause:false,restart:false,mute:false,unmute:false,settings:false,fullscreen:false,
+    saveState:false,loadState:false,screenRecord:false,gamepad:false,cheat:false,volume:false,volumeSlider:false,saveSavFiles:false,
+    loadSavFiles:false,quickSave:false,quickLoad:false,screenshot:false,cacheManager:false,exitEmulation:false,netplay:false,
+    diskButton:false,contextMenu:false};
+  window.EJS_VirtualGamepadSettings = [
+    {type:"zone", id:"stick", location:"left", left:"50%", top:"50%", joystickInput:false, inputValues:[4,5,6,7]},
+    {type:"button", text:"1", id:"b1", location:"right", left:40, top:80, bold:true, input_value:0},
+    {type:"button", text:"2", id:"b2", location:"right", left:81, top:40, bold:true, input_value:8},
+    {type:"button", text:"3", id:"b3", location:"right", top:40, bold:true, input_value:1},
+    {type:"button", text:"4", id:"b4", location:"right", left:40, bold:true, input_value:9},
+    {type:"button", text:"Coin", id:"coin", location:"center", left:-5, fontSize:15, block:true, input_value:2},
+    {type:"button", text:"Start", id:"start", location:"center", left:60, fontSize:15, block:true, input_value:3}
+  ];
+  let pendingState = null;
+  if(resume){ const st = await getState(g.id); if(st) pendingState = st.data; }
+  window.EJS_onGameStart = ()=>{
+    if(pendingState){
+      setTimeout(()=>{ try{ window.EJS_emulator.gameManager.loadState(pendingState); toast("Welcome back! 🎮"); }catch(e){ toast("Couldn't load your save"); } }, 300);
+    }
+    setTimeout(()=>toast("Tip: press Coin, then Start"), pendingState?2800:600);
+  };
+  const eng = window.EJS_core;
+  const ov = document.createElement("div"); ov.className="loading";
+  ov.innerHTML='<div class="spin">🕹️</div><div id="ldTxt">Warming up the arcade…</div>';
+  $("game-wrap").appendChild(ov);
+  try{
+    window.EJS_rawCoreFiles = await loadCore(eng, p=>{ const t=$("ldTxt"); if(t) t.textContent="Warming up the arcade… "+p+"%"; });
+  }catch(err){
+    ov.innerHTML='<div class="spin">😕</div><div>Couldn\'t load the game engine.<br>Check your internet connection and try again.</div>';
+    return;
+  }
+  ov.remove();
+  const s=document.createElement("script"); s.src="ejs/data/loader.js"; document.body.appendChild(s);
+}
+
+async function loadCore(eng, onProgress){
+  const base = "ejs/data/cores/"+eng;
+  const res = await fetch(base+"_wasm.bin");
+  if(!res.ok) throw new Error("core "+res.status);
+  const total = +res.headers.get("content-length") || 0;
+  let bytes;
+  if(res.body && res.body.getReader){
+    const reader = res.body.getReader(), chunks=[]; let got=0;
+    for(;;){ const {done,value}=await reader.read(); if(done) break; chunks.push(value); got+=value.length; if(total) onProgress(Math.min(99,Math.round(got/total*100))); }
+    bytes = new Uint8Array(got); let o=0; for(const c of chunks){ bytes.set(c,o); o+=c.length; }
+  } else bytes = new Uint8Array(await res.arrayBuffer());
+  if(bytes[0]===0x1f && bytes[1]===0x8b){
+    const ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+    bytes = new Uint8Array(await new Response(ds).arrayBuffer());
+  }
+  const txt = async n => new Uint8Array(await (await fetch(base+"_"+n+".json")).arrayBuffer());
+  const files = {"core.json": await txt("core"), "build.json": await txt("build")};
+  files[eng+"_libretro.wasm"] = bytes;
+  return files;
+}
+
+function emu(){ return window.EJS_emulator && window.EJS_emulator.started ? window.EJS_emulator : null; }
+
+$("pPause").onclick = ()=>{
+  const e=emu(); if(!e) return;
+  if(paused){ e.play(); paused=false; $("pPause").textContent="⏸ Pause"; }
+  else { e.pause(); paused=true; $("pPause").textContent="▶ Resume"; }
+};
+async function doSave(){
+  const e=emu(); if(!e){ toast("The game is still loading"); return false; }
+  try{
+    const data = e.gameManager.getState();
+    await putState({id:current.id, data:new Uint8Array(data), at:Date.now()});
+    saved.add(current.id);
+    toast("Progress saved 💾"); return true;
+  }catch(err){ toast("This game can't be saved, sorry"); return false; }
+}
+$("pSave").onclick = doSave;
+$("pLoad").onclick = async ()=>{
+  const e=emu(); if(!e){ toast("The game is still loading"); return; }
+  const st = await getState(current.id);
+  if(!st){ toast("No save yet — tap Save first"); return; }
+  try{ e.gameManager.loadState(st.data); toast("Loaded your save 📂"); }catch(err){ toast("Couldn't load the save"); }
+};
+$("pFull").onclick = async ()=>{
+  try{
+    if(document.fullscreenElement) await document.exitFullscreen();
+    else await $("player").requestFullscreen();
+  }catch(e){ toast("Full screen isn't allowed here"); }
+};
+$("pBack").onclick = ()=>{
+  sheet('<h3>Leave '+esc(current.title)+'?</h3><p>Save first so you can carry on later.</p><div class="opts">'+
+    '<button class="opt primary" data-act="saveexit"><span class="e">💾</span>Save and leave</button>'+
+    '<button class="opt" data-act="exit"><span class="e">🚪</span>Leave without saving</button>'+
+    '<button class="opt" data-act="engine"><span class="e">⚙️</span><span>Game not working?<small>Switch to '+ENGINES[(current.engine||"fbneo")==="fbneo"?"mame2003_plus":"fbneo"].label+' and try again</small></span></button>'+
+    '<button class="opt" data-act="stay"><span class="e">🎮</span>Keep playing</button></div>',
+  async (a,s)=>{
+    if(a==="stay"){ s.remove(); return; }
+    if(a==="saveexit"){ if(!(await doSave())) { s.remove(); return; } }
+    if(a==="engine"){
+      current.engine = (current.engine||"fbneo")==="fbneo" ? "mame2003_plus" : "fbneo";
+      await saveGame(current);
+      try{ sessionStorage.setItem("ea-autoplay", current.id); }catch(e){}
+    }
+    s.remove();
+    // Our own Save handles progress; skip the engine's unload routine, which can crash the tab.
+    try{ window.EJS_emulator.pause(); window.EJS_emulator.started = false; }catch(e){}
+    setTimeout(()=>location.reload(), a==="saveexit"?500:50);   // a fresh page is the cleanest way to stop the engine
+  });
+};
+
+/* ---------------- Start ---------------- */
+(async function(){
+  db = await openDB();
+  await refresh();
+  let auto=null; try{ auto=sessionStorage.getItem("ea-autoplay"); sessionStorage.removeItem("ea-autoplay"); }catch(e){}
+  if(auto){ const g=games.find(x=>x.id===auto); if(g){ toast("Trying "+ENGINES[g.engine].label+"…"); launch(g,false); } }
+})();
+})();
+</script>
+</body>
+</html>
