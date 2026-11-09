@@ -181,9 +181,9 @@
   /* ================= Game data ================= */
   const W = 600, H = 800, HOLD_Y = 62, WALL = 60, GLASS = 10;
   const F = [null,
-    {e:'🌱',c:'#cfe8b0',r:22},{e:'🍀',c:'#a8dca0',r:30},{e:'🌼',c:'#fde58a',r:40},{e:'🌷',c:'#f8b8c8',r:50},
-    {e:'🌸',c:'#fbcfe3',r:61},{e:'🌺',c:'#f59aae',r:73},{e:'🌻',c:'#ffd166',r:86},{e:'🌹',c:'#ec7f92',r:100},
-    {e:'🪷',c:'#e0b6ef',r:115},{e:'💐',c:'#c9e4f7',r:131},{e:'🌳',c:'#9fd28f',r:148}
+    {e:'🌱',c:'#b9773f',r:22},{e:'🍀',c:'#14a99a',r:30},{e:'🌼',c:'#ffc61a',r:40},{e:'🌷',c:'#ff5c8a',r:50},
+    {e:'🌸',c:'#3d9bff',r:61},{e:'🌺',c:'#ff7033',r:73},{e:'🌻',c:'#9b5de5',r:86},{e:'🌹',c:'#d7263d',r:100},
+    {e:'🪷',c:'#f15bb5',r:115},{e:'💐',c:'#2f6fe0',r:131},{e:'🌳',c:'#2e8b57',r:148}
   ];
   const MAX = F.length - 1;
   const POINTS = [0,1,3,6,10,15,21,28,36,45,55,66];
@@ -257,12 +257,16 @@
   function buildSprites(){
     sprites = F.map((f,i)=>{
       if(!f) return null;
-      const k=scale*dpr, s=Math.ceil(f.r*2*k)+4, o=document.createElement('canvas'); o.width=o.height=s;
+      const k=scale*dpr, pad=Math.ceil(f.r*k*.12)+3, s=Math.ceil(f.r*2*k)+pad*2, o=document.createElement('canvas'); o.width=o.height=s;
       const g=o.getContext('2d'), c=s/2, R=f.r*k;
+      // soft shadow so flowers stand out from the glass and scenery
+      g.save(); g.shadowColor='rgba(40,20,40,.35)'; g.shadowBlur=R*.14; g.shadowOffsetY=R*.05;
+      g.fillStyle=f.c; g.beginPath(); g.arc(c,c,R,0,Math.PI*2); g.fill(); g.restore();
       const grad=g.createRadialGradient(c-R*.35,c-R*.4,R*.1,c,c,R);
-      grad.addColorStop(0,'#ffffff'); grad.addColorStop(.35,f.c); grad.addColorStop(1,shade(f.c,-18));
+      grad.addColorStop(0,shade(f.c,90)); grad.addColorStop(.45,f.c); grad.addColorStop(1,shade(f.c,-35));
       g.fillStyle=grad; g.beginPath(); g.arc(c,c,R,0,Math.PI*2); g.fill();
-      g.lineWidth=Math.max(1.5,R*.05); g.strokeStyle=shade(f.c,-30); g.stroke();
+      g.lineWidth=Math.max(2.5,R*.08); g.strokeStyle=shade(f.c,-80); g.stroke();
+      g.lineWidth=Math.max(1,R*.03); g.strokeStyle='rgba(255,255,255,.7)'; g.beginPath(); g.arc(c,c,R*.86,0,Math.PI*2); g.stroke();
       const em=emoji(i);
       if(em){ const d=R*1.73; g.drawImage(em,c-d/2,c-d/2+R*.06,d,d); } else vectorFlower(g,c,c,R,i);
       return o;
@@ -798,13 +802,14 @@
     draw(now);
     requestAnimationFrame(frame);
   }
+  function drawSprite(lvl,x,y){ const sp=sprites[lvl], k=scale*dpr, w=sp.width/k; ctx.drawImage(sp,x-w/2,y-w/2,w,w); }
   function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.lineTo(x+w-r,y); g.quadraticCurveTo(x+w,y,x+w,y+r); g.lineTo(x+w,y+h-r); g.quadraticCurveTo(x+w,y+h,x+w-r,y+h); g.lineTo(x+r,y+h); g.quadraticCurveTo(x,y+h,x,y+h-r); g.lineTo(x,y+r); g.quadraticCurveTo(x,y,x+r,y); g.closePath(); }
   function draw(now){
     const k=scale*dpr; ctx.setTransform(k,0,0,k,0,0); ctx.clearRect(0,0,W,H);
     // glass jar
     roundRect(ctx,2,2,W-4,H-4,44);
     const jg=ctx.createLinearGradient(0,0,W,0);
-    jg.addColorStop(0,'rgba(255,255,255,.78)'); jg.addColorStop(.12,'rgba(255,255,255,.6)'); jg.addColorStop(.5,'rgba(255,255,255,.5)'); jg.addColorStop(.88,'rgba(255,255,255,.6)'); jg.addColorStop(1,'rgba(255,255,255,.8)');
+    jg.addColorStop(0,'rgba(255,255,255,.9)'); jg.addColorStop(.12,'rgba(255,255,255,.8)'); jg.addColorStop(.5,'rgba(255,255,255,.76)'); jg.addColorStop(.88,'rgba(255,255,255,.8)'); jg.addColorStop(1,'rgba(255,255,255,.9)');
     ctx.fillStyle=jg; ctx.fill();
     ctx.lineWidth=GLASS; ctx.strokeStyle='rgba(190,225,240,.95)'; ctx.stroke();
     ctx.lineWidth=2; ctx.strokeStyle='rgba(120,170,200,.6)'; roundRect(ctx,GLASS/2+2,2,W-GLASS-4,H-GLASS/2-4,40); ctx.stroke();
@@ -821,14 +826,14 @@
     if(!dead && !clearing){
       const r=F[cur].r, x=Math.max(r+GLASS+2, Math.min(W-r-GLASS-2, aimX));
       if(DIFF[diff].guide){ ctx.save(); ctx.strokeStyle='rgba(200,150,170,.4)'; ctx.lineWidth=2; ctx.setLineDash([4,10]); ctx.beginPath(); ctx.moveTo(x,HOLD_Y+r); ctx.lineTo(x,H-GLASS); ctx.stroke(); ctx.restore(); }
-      ctx.globalAlpha=ready&&!paused?1:.35; ctx.drawImage(sprites[cur],x-r-2/k,HOLD_Y-r-2/k,r*2+4/k,r*2+4/k); ctx.globalAlpha=1;
+      ctx.globalAlpha=ready&&!paused?1:.35; drawSprite(cur,x,HOLD_Y); ctx.globalAlpha=1;
     }
     for(const b of Composite.allBodies(engine.world)){
       if(!b.lvl) continue;
       const r=F[b.lvl].r; let s=1;
       if(b.grow>0){ if(!paused) b.grow=Math.max(0,b.grow-.08); s=1-b.grow*.35+Math.sin(b.grow*Math.PI)*.15; }
       ctx.save(); ctx.translate(b.position.x,b.position.y); ctx.rotate(b.angle); ctx.scale(s,s);
-      ctx.drawImage(sprites[b.lvl],-r-2/k,-r-2/k,r*2+4/k,r*2+4/k); ctx.restore();
+      drawSprite(b.lvl,0,0); ctx.restore();
     }
     for(const p of particles){ ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col; ctx.beginPath(); ctx.ellipse(0,0,p.sz,p.sz*.55,0,0,Math.PI*2); ctx.fill(); ctx.restore(); }
     ctx.globalAlpha=1;
