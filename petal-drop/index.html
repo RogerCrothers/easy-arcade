@@ -44,6 +44,14 @@
   .ladder{display:flex;justify-content:space-between;align-items:center;margin-top:10px;background:#fffcfdaa;border-radius:16px;padding:6px 8px}
   .ladder div{font-size:clamp(15px,3.2vw,24px);opacity:.25;transition:opacity .3s}
   .ladder div.seen{opacity:1}
+  .diff{display:flex;gap:6px;background:#fffcfdaa;border-radius:16px;padding:5px;margin-bottom:10px}
+  .diff button{flex:1;background:transparent;color:var(--ink);box-shadow:none;padding:8px 6px;font-size:clamp(14px,2.6vw,17px);border-radius:12px}
+  .diff button.on{background:var(--accent);color:#fff;box-shadow:0 2px 0 #b35472}
+  .diff button:active{transform:none}
+  .confirm{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#fff8fae0;border-radius:0 0 34px 34px;z-index:5;text-align:center;padding:20px;flex-direction:column;gap:12px}
+  .confirm.show{display:flex}
+  .confirm .row{display:flex;gap:8px}
+  button.ghost{background:#fff;color:var(--ink);box-shadow:0 3px 0 #0000001a}
   .hint{text-align:center;color:var(--muted);font-size:clamp(12px,2.2vw,15px);margin-top:8px}
 </style>
 </head>
@@ -57,6 +65,11 @@
       <div class="box"><small>Best</small><b id="best">0</b></div>
     </div>
   </header>
+  <div class="diff" id="diff">
+    <button data-d="easy">🌱 Easy</button>
+    <button data-d="normal">🌷 Normal</button>
+    <button data-d="hard">🌹 Hard</button>
+  </div>
   <div class="stage">
     <canvas id="c"></canvas>
     <div class="overlay" id="over">
@@ -64,6 +77,11 @@
       <h2 id="ovTitle">The vase overflowed!</h2>
       <p id="ovText">Score: 0</p>
       <button id="again">Pick a new bunch</button>
+    </div>
+    <div class="confirm" id="confirm">
+      <h2 style="margin:0;font-size:clamp(22px,5vw,32px)" id="cfTitle">Start a new game?</h2>
+      <p style="margin:0;color:var(--muted)">Your current vase will be lost.</p>
+      <div class="row"><button id="cfYes">Yes, switch</button><button class="ghost" id="cfNo">Keep playing</button></div>
     </div>
     <div class="overlay" id="loadErr">
       <div class="big">🌧️</div>
@@ -80,7 +98,14 @@
   if(!window.Matter){ document.getElementById('loadErr').classList.add('show'); return; }
   const {Engine, Bodies, Composite, Body, Events} = Matter;
 
-  const W = 600, H = 800, LINE = 130, HOLD_Y = 62, WALL = 60;
+  const W = 600, H = 800, HOLD_Y = 62, WALL = 60;
+  // Difficulty: where the danger line sits, how long you may stay over it, gravity, and which flowers drop
+  const DIFF = {
+    easy:   {name:'Easy',   line:112, danger:3800, gravity:1.0,  guide:true,  drops:[[1,.45],[2,.80],[3,1]]},
+    normal: {name:'Normal', line:130, danger:2200, gravity:1.15, guide:true,  drops:[[1,.32],[2,.58],[3,.80],[4,.94],[5,1]]},
+    hard:   {name:'Hard',   line:165, danger:1300, gravity:1.4,  guide:false, drops:[[1,.22],[2,.44],[3,.66],[4,.85],[5,1]]}
+  };
+  let diff = 'normal', LINE = 130;
   const F = [null,
     {e:'🌱',c:'#cfe8b0',r:22},
     {e:'🍀',c:'#a8dca0',r:30},
@@ -104,13 +129,15 @@
 
   function load(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}}
   function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
-  let best = load('petal-best',0), seen = load('petal-seen',1);
+  let seen = load('petal-seen',1), best = 0;
+  diff = load('petal-diff','normal'); if(!DIFF[diff]) diff='normal';
+  const bestKey = d => d==='normal' ? 'petal-best' : 'petal-best-'+d;
 
   let scale = 1, dpr = 1, sprites = [];
   function resize(){
     const gw = Math.max(240, Math.min(window.innerWidth - 20, (window.innerHeight - 170) * 0.75, 640));
     document.documentElement.style.setProperty('--gw', gw + 'px');
-    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
     scale = gw / W;
     cv.width = Math.round(gw * dpr); cv.height = Math.round(gw * 4/3 * dpr);
     buildSprites();
@@ -125,11 +152,41 @@
       grad.addColorStop(0,'#ffffff'); grad.addColorStop(.35, f.c); grad.addColorStop(1, shade(f.c,-18));
       g.fillStyle = grad; g.beginPath(); g.arc(c,c,R,0,Math.PI*2); g.fill();
       g.lineWidth = Math.max(1.5, R*.05); g.strokeStyle = shade(f.c,-30); g.stroke();
-      g.font = Math.round(R*1.3) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-      g.textAlign='center'; g.textBaseline='middle';
-      g.fillText(f.e, c, c + R*.08);
+      const em = emoji(i);
+      if(em){ const d = R*1.73; g.drawImage(em, c - d/2, c - d/2 + R*.06, d, d); }
+      else drawVectorFlower(g, c, c, R, i);
       return o;
     });
+  }
+  // Emoji are drawn once at a modest size and scaled. Safari fails to draw very large emoji on a canvas,
+  // which left iPhones (high-res screens) with blank flowers.
+  const emojiCache = {};
+  function emoji(i){
+    if(i in emojiCache) return emojiCache[i];
+    const S = 128, o = document.createElement('canvas'); o.width = o.height = S;
+    const g = o.getContext('2d');
+    g.font = '96px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(F[i].e, S/2, S/2 + 4);
+    let ok = false;
+    try{
+      const px = g.getImageData(0,0,S,S).data; let colored = 0;
+      for(let p=0;p<px.length;p+=16){ if(px[p+3]>40 && !(px[p]===px[p+1] && px[p+1]===px[p+2])) colored++; }
+      ok = colored > 60;   // a missing emoji draws nothing or a grey box
+    }catch(e){ ok = true; }
+    return emojiCache[i] = ok ? o : null;
+  }
+  function drawVectorFlower(g, x, y, R, lvl){
+    const petals = 5 + (lvl % 4), col = shade(F[lvl].c, -45);
+    g.save(); g.translate(x, y);
+    g.fillStyle = col;
+    for(let p=0;p<petals;p++){
+      g.rotate(Math.PI*2/petals);
+      g.beginPath(); g.ellipse(0, -R*.42, R*.2, R*.36, 0, 0, Math.PI*2); g.fill();
+    }
+    g.fillStyle = '#fff3b0'; g.beginPath(); g.arc(0,0,R*.22,0,Math.PI*2); g.fill();
+    g.fillStyle = '#e9a93b'; g.beginPath(); g.arc(0,0,R*.12,0,Math.PI*2); g.fill();
+    g.restore();
   }
   function shade(hex, amt){
     const n = parseInt(hex.slice(1),16);
@@ -143,12 +200,14 @@
 
   function randLevel(){
     const r = Math.random();
-    return r < .32 ? 1 : r < .58 ? 2 : r < .80 ? 3 : r < .94 ? 4 : 5;
+    for(const [lvl, p] of DIFF[diff].drops) if(r < p) return lvl;
+    return 1;
   }
 
   function newGame(){
     engine = Engine.create();
-    engine.gravity.y = 1.15;
+    engine.gravity.y = DIFF[diff].gravity; LINE = DIFF[diff].line;
+    best = load(bestKey(diff), 0); renderDiff();
     const opts = {isStatic:true, friction:.4, restitution:.1};
     Composite.add(engine.world, [
       Bodies.rectangle(W/2, H + WALL/2 - 8, W + WALL*2, WALL, opts),
@@ -222,7 +281,7 @@
 
   function updateUI(){
     scoreEl.textContent = score;
-    if(score > best){ best = score; save('petal-best', best); }
+    if(score > best){ best = score; save(bestKey(diff), best); }
     bestEl.textContent = best;
     nextEl.textContent = F[nxt].e;
     let h=''; for(let i=1;i<=MAX;i++) h += '<div class="'+(i<=seen?'seen':'')+'">'+(i<=seen?F[i].e:'❔')+'</div>';
@@ -231,7 +290,7 @@
 
   function gameOver(){
     dead = true;
-    document.getElementById('ovText').textContent = 'Score: ' + score + (score >= best && score > 0 ? '  ·  New best! 🎉' : '');
+    document.getElementById('ovText').textContent = DIFF[diff].name + ' · Score: ' + score + (score >= best && score > 0 ? '  ·  New best! 🎉' : '');
     over.classList.add('show');
   }
 
@@ -241,7 +300,7 @@
     return (clientX - r.left) / r.width * W;
   }
   let down = false;
-  document.addEventListener('pointerdown', e=>{ if(e.target.closest('button')) return; down = true; aimX = toWorld(e.clientX); });
+  document.addEventListener('pointerdown', e=>{ if(e.target.closest('button') || confirmEl.classList.contains('show')) return; down = true; aimX = toWorld(e.clientX); });
   document.addEventListener('pointermove', e=>{ if(down || e.pointerType === 'mouse') aimX = toWorld(e.clientX); });
   document.addEventListener('pointerup', e=>{ if(!down) return; down = false; aimX = toWorld(e.clientX); drop(); });
   document.addEventListener('pointercancel', ()=>{ down = false; });
@@ -250,6 +309,17 @@
     else if(e.key===' '||e.key==='ArrowDown'){ e.preventDefault(); drop(); }
   });
   document.getElementById('again').onclick = newGame;
+  const diffEl = document.getElementById('diff'), confirmEl = document.getElementById('confirm');
+  let pendingDiff = null;
+  function renderDiff(){ diffEl.querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.d===diff)); }
+  function setDiff(d){ diff = d; save('petal-diff', d); confirmEl.classList.remove('show'); newGame(); }
+  diffEl.addEventListener('click', e=>{
+    const b = e.target.closest('button'); if(!b || b.dataset.d===diff) return;
+    if(score > 0 && !dead){ pendingDiff = b.dataset.d; document.getElementById('cfTitle').textContent = 'Switch to '+DIFF[pendingDiff].name+'?'; confirmEl.classList.add('show'); }
+    else setDiff(b.dataset.d);
+  });
+  document.getElementById('cfYes').onclick = ()=>setDiff(pendingDiff);
+  document.getElementById('cfNo').onclick = ()=>confirmEl.classList.remove('show');
 
   // Loop
   const STEP = 1000/60; let acc = 0, last = performance.now();
@@ -267,7 +337,7 @@
         if(now - b.born > 1600 && b.position.y - F[b.lvl].r < LINE) danger = true;
       }
       dangerT = danger ? dangerT + dt : Math.max(0, dangerT - dt*2);
-      if(dangerT > 2200) gameOver();
+      if(dangerT > DIFF[diff].danger) gameOver();
     }
     // particles
     for(const p of particles){ p.x+=p.vx; p.y+=p.vy; p.vy+=.15; p.vx*=.97; p.life-=.022; p.rot+=.15; }
@@ -302,8 +372,8 @@
     // aim guide + held flower
     if(!dead){
       const r = F[cur].r, x = Math.max(r + 8, Math.min(W - r - 8, aimX));
-      ctx.save(); ctx.strokeStyle='rgba(200,150,170,.35)'; ctx.lineWidth=2; ctx.setLineDash([4,10]);
-      ctx.beginPath(); ctx.moveTo(x, HOLD_Y + r); ctx.lineTo(x, H-8); ctx.stroke(); ctx.restore();
+      if(DIFF[diff].guide){ ctx.save(); ctx.strokeStyle='rgba(200,150,170,.35)'; ctx.lineWidth=2; ctx.setLineDash([4,10]);
+      ctx.beginPath(); ctx.moveTo(x, HOLD_Y + r); ctx.lineTo(x, H-8); ctx.stroke(); ctx.restore(); }
       ctx.globalAlpha = ready ? 1 : .35;
       ctx.drawImage(sprites[cur], x - r - 2/k, HOLD_Y - r - 2/k, r*2 + 4/k, r*2 + 4/k);
       ctx.globalAlpha = 1;
