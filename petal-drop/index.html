@@ -651,11 +651,38 @@
   // This device: everyone who plays here. Shared (when hosted on claude.ai): everyone who opens the page.
   let localScores = load('petal-scores', []);
   let sharedDb = null, myId = null, shared = null, sharedState = 'off', sharedCanWrite = true;
+  // Shared table for the public website copy: a free Supabase table (read + add only; nobody can edit or delete others' scores)
+  const SUPA = { url: 'https://zgscrlbuhcltemqjqkdz.supabase.co', key: 'sb_publishable_FaJOaBNoVMq0_di7Z_Zzfw_laQHMhCo' };   // filled in once the Supabase project exists
+  const SUPA_ON = !!(SUPA.url && SUPA.key);
+  let myRowIds = load('petal-myrows', []);
+  async function supaLoad(){
+    if(!shared) sharedState='loading';
+    try{
+      const r = await fetch(SUPA.url+'/rest/v1/scores?select=id,name,score,diff,created_at&order=score.desc&limit=200', {headers:{apikey:SUPA.key}});
+      if(!r.ok) throw new Error(r.status);
+      const rows = await r.json();
+      shared = rows.filter(e=>e && typeof e.score==='number').map(e=>({name:String(e.name||'Someone').slice(0,16), score:e.score, diff:e.diff, at:Date.parse(e.created_at)||0, mine:myRowIds.includes(e.id)}));
+      sharedState='ready';
+    }catch(e){ sharedState='error'; }
+    renderScores();
+  }
+  async function supaSave(entry){
+    try{
+      const r = await fetch(SUPA.url+'/rest/v1/scores', {method:'POST', headers:{apikey:SUPA.key,'Content-Type':'application/json',Prefer:'return=representation'},
+        body: JSON.stringify({name:entry.name, score:entry.score, diff:entry.diff, rank:entry.rank})});
+      if(!r.ok) return false;
+      const rows = await r.json(); if(rows && rows[0] && rows[0].id){ myRowIds.push(rows[0].id); myRowIds=myRowIds.slice(-200); save('petal-myrows',myRowIds); }
+      supaLoad(); return true;
+    }catch(e){ return false; }
+  }
   let hsWhere = 'local', hsFilter = 'all';
   function saveLocal(entry){ localScores.push(entry); localScores.sort((a,b)=>b.score-a.score); localScores=localScores.slice(0,50); save('petal-scores',localScores); }
   (async function connectShared(){
     try{
-      if(!window.claude || typeof window.claude.use!=='function') return;
+      if(!window.claude || typeof window.claude.use!=='function'){
+        if(SUPA_ON){ sharedDb='supa'; hsWhere='shared'; supaLoad(); }
+        return;
+      }
       sharedState='loading';
       const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
       if(!db){ sharedState='off'; return; }
@@ -673,6 +700,7 @@
     }catch(e){ sharedState='off'; }
   })();
   async function saveShared(entry){
+    if(sharedDb==='supa') return supaSave(entry);
     if(!sharedDb || !myId || !sharedCanWrite) return false;
     try{
       const ref = sharedDb.collection('scores').doc(myId);
@@ -692,13 +720,13 @@
     const ok = await saveShared(entry);
     $('saveBox').style.display='none'; $('afterSave').style.display='flex';
     $('saveBtn').disabled=false; $('saveBtn').textContent='🏆 Save score';
-    $('ovNote').textContent = sharedDb ? (ok ? 'Saved! Everyone can see it on the high score table 🌍' : 'Saved on this device. (Only people invited to edit this page can add to the shared table.)') : 'Saved on this device 📱';
+    $('ovNote').textContent = sharedDb ? (ok ? 'Saved! Everyone can see it on the high score table 🌍' : sharedDb==='supa' ? 'Saved on this device — the shared table couldn\'t be reached just now.' : 'Saved on this device. (Only people invited to edit this page can add to the shared table.)') : 'Saved on this device 📱';
     if(sharedDb && ok) hsWhere='shared'; else hsWhere='local';
     renderScores();
   };
   $('skipBtn').onclick=()=>{ $('saveBox').style.display='none'; $('afterSave').style.display='flex'; };
   $('nameIn').addEventListener('keydown', e=>{ if(e.key==='Enter') $('saveBtn').click(); e.stopPropagation(); });
-  function openScores(){ if(!dead && !paused) togglePause(true); renderScores(); $('scoresModal').classList.add('show'); }
+  function openScores(){ if(!dead && !paused) togglePause(true); if(sharedDb==='supa') supaLoad(); renderScores(); $('scoresModal').classList.add('show'); }
   $('scoresBtn').onclick=openScores; $('seeScores').onclick=openScores;
   $('hsClose').onclick=()=>$('scoresModal').classList.remove('show');
   $('scoresModal').addEventListener('click', e=>{ if(e.target.id==='scoresModal') $('scoresModal').classList.remove('show'); });
@@ -709,7 +737,7 @@
       '<button data-w="local" class="'+(hsWhere==='local'||!sharedDb?'on':'')+'">📱 This device</button>';
     $('hsDiff').querySelectorAll('button').forEach(b=>b.classList.toggle('on', b.dataset.f===hsFilter));
     const useShared = sharedDb && hsWhere==='shared';
-    $('hsSub').textContent = useShared ? 'Scores from everyone who plays this page.' + (sharedCanWrite ? '' : ' Only people invited to edit it can add scores here.')
+    $('hsSub').textContent = useShared ? 'Scores from everyone who plays Petal Drop.' + (sharedCanWrite ? '' : ' Only people invited to edit it can add scores here.')
       : 'Scores from everyone who has played on this device.';
     let list = useShared ? (shared||[]) : localScores;
     if(hsFilter!=='all') list = list.filter(e=>e.diff===hsFilter);
