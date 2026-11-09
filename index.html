@@ -176,6 +176,7 @@
   .pbar{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#0d0a1c;flex-wrap:nowrap;overflow-x:auto}
   .pbtn{background:var(--panel2);border-radius:14px;padding:10px 14px;font-weight:800;font-size:16px;display:flex;align-items:center;gap:7px;white-space:nowrap}
   .pbtn.back{background:var(--pink)}
+  .pbtn.alert{background:var(--yellow);color:#1b1230;animation:pulse .8s infinite alternate}
   .pbtn:active{transform:scale(.96)}
   .ptitle{flex:1;min-width:60px;font-weight:800;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);padding:0 6px}
   #game-wrap{flex:1;position:relative;min-height:0}
@@ -197,7 +198,7 @@
   <div class="home-cards">
     <button class="hcard add" data-go="add"><span class="ic">➕</span><span class="t">Add games</span><span class="d">Bring in game files</span></button>
     <button class="hcard" data-go="library"><span class="ic">🕹️</span><span class="t">Game library</span><span class="d" id="libCount">No games yet</span></button>
-    <button class="hcard" data-go="settings"><span class="ic">⚙️</span><span class="t">Settings</span><span class="d">Controllers, sound & storage</span></button>
+    <button class="hcard" data-go="settings"><span class="ic">⚙️</span><span class="t">Settings</span><span class="d">Keys, controllers, sound & storage</span></button>
   </div>
   <button class="continue hidden" id="continueBtn"></button>
   <div class="legal-line">⚖️ Easy Arcade includes no games. Only add games you have the right to use. <button data-legal>Read more</button></div>
@@ -264,12 +265,12 @@
     </div>
 
     <div class="card">
-      <h2>🎮 Controller & keyboard</h2>
-      <p>Connect a Bluetooth or USB controller, then press any button on it so this page can see it. Tap a box below, then press the button or key you want to use.</p>
-      <div class="pads" id="pads"></div>
+      <h2>⌨️ Keyboard & controller</h2>
+      <p>These are the keys and buttons used in every game. To change one, tap its box, then press the key or controller button you want. You can also do this during a game with the <b>⌨️ Controls</b> button. A controller only shows up after you press one of its buttons.</p>
+      <div class="pads"></div>
       <table class="maptable">
         <thead><tr><th>Action</th><th>Controller</th><th>Keyboard</th></tr></thead>
-        <tbody id="mapBody"></tbody>
+        <tbody class="mapbody"></tbody>
       </table>
       <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
         <button class="small-btn" id="resetMap">↺ Reset to defaults</button>
@@ -313,6 +314,8 @@
     <button class="pbtn" id="pPause">⏸ Pause</button>
     <button class="pbtn" id="pSave">💾 Save</button>
     <button class="pbtn" id="pLoad">📂 Load</button>
+    <button class="pbtn" id="pSound">🔊 Sound</button>
+    <button class="pbtn" id="pControls">⌨️ Controls</button>
     <button class="pbtn" id="pFull">⛶</button>
   </div>
   <div id="game-wrap"><div id="game"></div></div>
@@ -329,6 +332,24 @@
 <script>
 (function(){
 "use strict";
+
+/* ================= Audio unlock =================
+   Browsers keep game sound switched off until the player taps or presses something,
+   and iPhones/iPads only accept certain kinds of tap. We track every audio context the
+   engine creates and switch it on at the first interaction of any kind. */
+const audioCtxs = [];
+(function(){
+  const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return;
+  function Tracked(a, b){ const c = new AC(a, b); audioCtxs.push(c); try{ c.addEventListener("statechange", ()=>updateSoundBtn()); }catch(e){} return c; }
+  Tracked.prototype = AC.prototype;
+  try{ window.AudioContext = Tracked; if(window.webkitAudioContext) window.webkitAudioContext = Tracked; }catch(e){}
+})();
+function unlockAudio(){
+  try{ if(navigator.audioSession) navigator.audioSession.type = "playback"; }catch(e){}   // iPhone: play even with the silent switch on
+  for(const c of audioCtxs){ if(c.state!=="running" && c.state!=="closed"){ try{ c.resume().then(()=>updateSoundBtn()).catch(()=>{}); }catch(e){} } }
+}
+["pointerdown","pointerup","touchstart","touchend","mousedown","keydown","click"].forEach(ev=>window.addEventListener(ev, unlockAudio, {capture:true, passive:true}));
+try{ if(navigator.audioSession) navigator.audioSession.type = "playback"; }catch(e){}
 
 /* ================= Data ================= */
 const TITLES = {
@@ -468,10 +489,10 @@ function toast(msg, ms){
   const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t);
   clearTimeout(toastT); toastT=setTimeout(()=>t.remove(), ms||2600);
 }
-function sheet(html, onclick){
+function sheet(html, onclick, onclose){
   const s=document.createElement("div"); s.className="scrim";
   s.innerHTML='<div class="sheet">'+html+'</div>';
-  s.addEventListener("click",e=>{ if(e.target===s){ s.remove(); return; } const b=e.target.closest("[data-act]"); if(b && !b.disabled) onclick(b.dataset.act, s, b); });
+  s.addEventListener("click",e=>{ if(e.target===s){ s.remove(); if(onclose) onclose(); return; } const b=e.target.closest("[data-act]"); if(b && !b.disabled) onclick(b.dataset.act, s, b); });
   document.body.appendChild(s);
   return s;
 }
@@ -764,9 +785,10 @@ let padLoop = null, listening = null;
 function padLabel(v){ return v ? (PAD_NAMES[v] || v.replace(/_/g," ").toLowerCase()) : "—"; }
 function keyLabel(v){ return v ? (KEY_NAMES[v] || (v.length===1 ? v.toUpperCase() : v.replace(/\b\w/g,c=>c.toUpperCase()))) : "—"; }
 function renderMap(){
-  $("mapBody").innerHTML = ACTIONS.map(a=>'<tr data-i="'+a.i+'"><td>'+a.label+'</td>'+
+  const html = ACTIONS.map(a=>'<tr data-i="'+a.i+'"><td>'+a.label+'</td>'+
     '<td><button class="mapbtn" data-pad="'+a.i+'">'+esc(padLabel(settings.pad[a.i]))+'</button></td>'+
     '<td><button class="mapbtn" data-key="'+a.i+'">'+esc(keyLabel(settings.keys[a.i]))+'</button></td></tr>').join("");
+  document.querySelectorAll(".mapbody").forEach(t=>t.innerHTML=html);
 }
 function renderSettings(){
   $("sOnscreen").checked = settings.onscreen;
@@ -780,28 +802,30 @@ $("sOnscreen").onchange = e=>{ settings.onscreen=e.target.checked; saveSettings(
 $("sLeft").onchange = e=>{ settings.leftHanded=e.target.checked; saveSettings(); };
 $("sVol").oninput = e=>{ settings.volume=+e.target.value; $("volTxt").textContent=settings.volume+"%"; saveSettings(); };
 $("sEngine").onclick = e=>{ const b=e.target.closest("button"); if(!b) return; settings.engine=b.dataset.v; saveSettings(); renderSettings(); };
-$("resetMap").onclick = ()=>{ settings.pad=Object.assign({},DEFAULT_PAD); settings.keys=Object.assign({},DEFAULT_KEYS); saveSettings(); stopListen(); renderMap(); toast("Controls reset"); };
+function resetControls(){ settings.pad=Object.assign({},DEFAULT_PAD); settings.keys=Object.assign({},DEFAULT_KEYS); saveSettings(); stopListen(); renderMap(); applyLiveControls(); toast("Controls reset"); }
+$("resetMap").onclick = resetControls;
 
 function stopListen(){ listening = null; document.querySelectorAll(".mapbtn.listen").forEach(b=>b.classList.remove("listen")); }
-$("mapBody").addEventListener("click", e=>{
+document.addEventListener("click", e=>{
   const b = e.target.closest(".mapbtn"); if(!b) return;
   const wasSame = b.classList.contains("listen");
   stopListen(); renderMap();
   if(wasSame) return;
-  const nb = $("mapBody").querySelector(b.dataset.pad!==undefined ? '[data-pad="'+b.dataset.pad+'"]' : '[data-key="'+b.dataset.key+'"]');
-  nb.classList.add("listen");
+  const sel = b.dataset.pad!==undefined ? '[data-pad="'+b.dataset.pad+'"]' : '[data-key="'+b.dataset.key+'"]';
+  const nbs = document.querySelectorAll(".mapbody "+sel);
+  nbs.forEach(nb=>nb.classList.add("listen"));
   if(b.dataset.pad!==undefined){
-    nb.textContent = navigator.getGamepads && [...navigator.getGamepads()].some(Boolean) ? "Press a button…" : "Connect & press…";
+    nbs.forEach(nb=>nb.textContent = navigator.getGamepads && [...navigator.getGamepads()].some(Boolean) ? "Press a button…" : "Connect & press…");
     listening = {type:"pad", i:+b.dataset.pad, base:snapshotPads(), t:Date.now()};
   } else {
-    nb.textContent = "Press a key…";
+    nbs.forEach(nb=>nb.textContent = "Press a key…");
     listening = {type:"key", i:+b.dataset.key};
   }
 });
 function assign(type, i, value){
   const map = type==="pad" ? settings.pad : settings.keys;
   for(const k in map) if(map[k]===value && +k!==i) map[k] = "";   // one action per button
-  map[i] = value; saveSettings(); stopListen(); renderMap();
+  map[i] = value; saveSettings(); stopListen(); renderMap(); applyLiveControls();
   toast(ACTIONS.find(a=>a.i===i).label+" → "+(type==="pad"?padLabel(value):keyLabel(value)));
 }
 window.addEventListener("keydown", e=>{
@@ -825,16 +849,17 @@ function renderPads(){
   const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
   const html = pads.length ? pads.map((p,n)=>'<div class="pad"><span class="dot"></span>'+(n===0?'Player 1: ':'Controller '+(n+1)+': ')+esc(p.id.replace(/\(.*?Vendor.*?\)/i,"").trim()||"Controller")+'</div>').join("")
     : '<div class="pad none"><span class="dot"></span>No controller found yet — connect one and press any button</div>';
-  if($("pads").innerHTML !== html) $("pads").innerHTML = html;
+  document.querySelectorAll(".pads").forEach(el=>{ if(el.innerHTML !== html) el.innerHTML = html; });
   return pads;
 }
-function enterSettings(){
-  renderSettings();
+let controlsSheetOpen = false;
+function enterSettings(){ renderSettings(); startPadLoop(); }
+function startPadLoop(){
   if(padLoop) return;
   const tick = ()=>{
     const pads = renderPads();
     const live = new Set(); for(const p of pads) padInputs(p).forEach(x=>live.add(x));
-    document.querySelectorAll("#mapBody tr").forEach(tr=>tr.classList.toggle("live", live.has(settings.pad[tr.dataset.i])));
+    document.querySelectorAll(".mapbody tr").forEach(tr=>tr.classList.toggle("live", live.has(settings.pad[tr.dataset.i])));
     if(listening && listening.type==="pad"){
       for(const p of pads){
         const base = listening.base[p.index] || {b:[],a:[]};
@@ -851,7 +876,7 @@ function enterSettings(){
   };
   padLoop = requestAnimationFrame(tick);
 }
-function leaveSettings(){ if(padLoop){ cancelAnimationFrame(padLoop); padLoop=null; } stopListen(); }
+function leaveSettings(){ if(controlsSheetOpen) return; if(padLoop){ cancelAnimationFrame(padLoop); padLoop=null; } stopListen(); }
 window.addEventListener("gamepadconnected", e=>{ if(!$("settings").classList.contains("hidden")) toast("🎮 Controller connected"); });
 
 async function storageInfo(){
@@ -906,6 +931,7 @@ async function launch(g, resume){
   current = g;
   g.lastPlayed = Date.now(); g.plays=(g.plays||0)+1; saveGame(g);
   VIEWS.forEach(v=>$(v).classList.add("hidden"));
+  $("progress").classList.add("hidden");
   leaveSettings();
   $("player").classList.remove("hidden");
   $("pTitle").textContent = g.title;
@@ -959,7 +985,9 @@ async function launch(g, resume){
     if(pendingState){
       setTimeout(()=>{ try{ e.gameManager.loadState(pendingState); toast("Welcome back! 🎮"); }catch(err){ toast("Couldn't load your save"); } }, 300);
     }
-    setTimeout(()=>toast("Tip: press Coin, then Start"), pendingState?2800:600);
+    unlockAudio(); updateSoundBtn(); setInterval(updateSoundBtn, 1000);
+    const touchOnly = window.matchMedia && matchMedia("(hover: none)").matches;
+    setTimeout(()=>toast(touchOnly ? "Tip: press Coin, then Start" : "⌨️ "+keyboardSummary(), touchOnly?2600:7000), pendingState?2800:600);
   };
   const eng = window.EJS_core;
   const ov = document.createElement("div"); ov.className="loading";
@@ -997,6 +1025,53 @@ async function loadCore(eng, onProgress){
 }
 
 function emu(){ return window.EJS_emulator && window.EJS_emulator.started ? window.EJS_emulator : null; }
+function applyLiveControls(){
+  const e = emu(); if(!e) return;
+  try{ e.controls = buildControls(); e.setupKeys(); }catch(err){}
+}
+function keyboardSummary(){
+  const k = settings.keys, L = i=>keyLabel(k[i]);
+  const arrows = k[4]==="up arrow" && k[5]==="down arrow" && k[6]==="left arrow" && k[7]==="right arrow";
+  const move = arrows ? "Arrow keys = move" : "Move: "+[4,5,6,7].map(L).join(" ");
+  const btns = [0,8,1,9].map(L).filter(x=>x!=="—").join(" ");
+  return L(2)+" = Coin · "+L(3)+" = Start · "+move+(btns?" · "+btns+" = buttons 1–4":"");
+}
+
+/* ---- Controls sheet (during a game) ---- */
+let pausedForControls = false;
+$("pControls").onclick = ()=>{
+  const e = emu();
+  if(e && !paused){ e.pause(); pausedForControls = true; }
+  controlsSheetOpen = true;
+  const close = ()=>{
+    controlsSheetOpen = false; stopListen();
+    if($("settings").classList.contains("hidden") && padLoop){ cancelAnimationFrame(padLoop); padLoop=null; }
+    const em = emu(); if(em && pausedForControls){ em.play(); } pausedForControls = false;
+  };
+  sheet('<h3>⌨️ Controls</h3><p>Tap a box, then press the key or controller button you want to use for it. Changes apply straight away and are kept for all games.</p>'+
+    '<div class="pads"></div>'+
+    '<table class="maptable"><thead><tr><th>Action</th><th>Controller</th><th>Keyboard</th></tr></thead><tbody class="mapbody"></tbody></table>'+
+    '<div class="opts" style="margin-top:16px"><button class="opt primary" data-act="done"><span class="e">✅</span>Done — back to the game</button><button class="opt" data-act="reset"><span class="e">↺</span>Reset to defaults</button></div>',
+    (a,s)=>{ if(a==="reset"){ resetControls(); return; } if(a==="done"){ s.remove(); close(); } }, close);
+  renderMap(); startPadLoop();
+};
+
+/* ---- Sound ---- */
+let muted = false;
+function soundBlocked(){ return audioCtxs.some(c=>c.state!=="running" && c.state!=="closed"); }
+function updateSoundBtn(){
+  const b = $("pSound"); if(!b) return;
+  const blocked = soundBlocked();
+  b.classList.toggle("alert", blocked && !muted);
+  b.textContent = blocked && !muted ? "🔇 Tap for sound" : muted ? "🔇 Muted" : "🔊 Sound";
+}
+$("pSound").onclick = ()=>{
+  const e = emu();
+  if(soundBlocked() && !muted){ unlockAudio(); setTimeout(updateSoundBtn, 300); toast("Sound on 🔊 — if you still can't hear it, check your volume and silent switch", 4000); return; }
+  muted = !muted;
+  try{ if(e) e.setVolume(muted ? 0 : settings.volume/100); }catch(err){}
+  updateSoundBtn();
+};
 $("pPause").onclick = ()=>{
   const e=emu(); if(!e) return;
   if(paused){ e.play(); paused=false; $("pPause").textContent="⏸ Pause"; }
