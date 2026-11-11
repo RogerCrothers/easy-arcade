@@ -48,3 +48,16 @@ Some games use switches from inside the real arcade cabinet. Tap **🛠️ Machi
 ## Artwork finder
 
 **🔎 Find artwork** in the library goes through each game that has no picture and offers its flyer, title screen and screenshot from the [libretro-thumbnails](https://github.com/libretro-thumbnails) project. `art-index.json` maps each game file name to its pictures; it's built from the FinalBurn Neo arcade game list.
+
+## Online library (on your own web hosting)
+
+When Easy Arcade runs from your own hosting, `api.php` can keep your games, artwork, settings and saves on your website, so they appear on every device. Most hosting includes PHP, which this needs (PHP 7.4 or newer).
+
+1. Upload the `easy-arcade` folder to your hosting, for example `public_html/easy-arcade/`.
+2. Open it in a browser and tap **Set up your online library** to choose a password.
+3. On other devices, tap **Sign in to your online library** and enter the same password.
+
+- **Where files are kept:** everything goes in `data/`, inside a sub-folder with a random name. The script creates this the first time you use it.
+- **Back-ups:** to keep a copy of your library, download the `data` folder.
+- **Forgotten password:** delete `data/config.php`, then open Easy Arcade to choose a new one. Your games stay where they are.
+- **Keep it private:** don't make the `data` folder public or share its contents.

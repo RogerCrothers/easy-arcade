@@ -150,7 +150,7 @@
   .opt.danger{color:#ff8a9a}
   .opt.sel{outline:3px solid var(--cyan)}
   .opt:disabled{opacity:.4}
-  .sheet input[type=text]{width:100%;background:var(--bg);border:2px solid var(--panel2);border-radius:14px;color:var(--ink);font:inherit;font-size:19px;padding:13px 15px;margin-bottom:14px;outline:none}
+  .sheet input[type=text],.sheet input[type=password]{width:100%;background:var(--bg);border:2px solid var(--panel2);border-radius:14px;color:var(--ink);font:inherit;font-size:19px;padding:13px 15px;margin-bottom:14px;outline:none}
   .agree{display:flex;gap:12px;align-items:flex-start;background:var(--bg);border-radius:14px;padding:14px;margin:6px 0 16px;font-size:16px;line-height:1.45;cursor:pointer}
   .agree input{width:24px;height:24px;flex:none;accent-color:var(--pink);margin-top:1px}
 
@@ -236,6 +236,7 @@
     <button class="hcard" data-go="settings"><span class="ic">⚙️</span><span class="t">Settings</span><span class="d">Keys, controllers, sound & storage</span></button>
   </div>
   <button class="continue hidden" id="continueBtn"></button>
+  <button class="continue hidden" id="cloudPrompt" style="background:#1f2a4a"></button>
   <div class="legal-line">⚖️ Easy Arcade includes no games. Only add games you have the right to use. <button data-legal>Read more</button></div>
 </div>
 
@@ -321,6 +322,11 @@
         <div class="seg" id="sEngine"><button data-v="fbneo">FinalBurn Neo</button><button data-v="mame2003_plus">MAME 2003-Plus</button></div></div>
       <div class="row"><div class="l">Artwork style<small>How pictures fit the game cards. You can change it per game from its ⋯ menu</small></div>
         <div class="seg" id="sArtFit"><button data-v="fill">Fill</button><button data-v="fit">Fit</button><button data-v="stretch">Stretch</button></div></div>
+    </div>
+
+    <div class="card" id="cloudCard">
+      <h2>☁️ Online library</h2>
+      <div id="cloudBody"></div>
     </div>
 
     <div class="card">
@@ -509,14 +515,136 @@ function tx(store, mode, fn){
   });
 }
 let memGames = [], memStates = {};
-async function listGames(){ return db ? await tx("games","readonly",s=>s.getAll()) : memGames; }
-async function saveGame(g){ if(db) await tx("games","readwrite",s=>s.put(g)); else { memGames = memGames.filter(x=>x.id!==g.id); memGames.push(g); } }
-async function removeGame(id){ if(db){ await tx("games","readwrite",s=>s.delete(id)); await tx("states","readwrite",s=>s.delete(id)); } else { memGames = memGames.filter(x=>x.id!==id); delete memStates[id]; } }
-async function getState(id){ return db ? await tx("states","readonly",s=>s.get(id)) : memStates[id]; }
-async function putState(v){ if(db) await tx("states","readwrite",s=>s.put(v)); else memStates[v.id]=v; }
-async function delState(id){ if(db) await tx("states","readwrite",s=>s.delete(id)); else delete memStates[id]; }
-async function stateIds(){ return db ? await tx("states","readonly",s=>s.getAllKeys()) : Object.keys(memStates); }
+/* This device (IndexedDB) */
+async function localGames(){ return db ? await tx("games","readonly",s=>s.getAll()) : memGames; }
+async function localPut(g){ if(db) await tx("games","readwrite",s=>s.put(g)); else { memGames = memGames.filter(x=>x.id!==g.id); memGames.push(g); } }
+async function localRemove(id){ if(db){ await tx("games","readwrite",s=>s.delete(id)); await tx("states","readwrite",s=>s.delete(id)); } else { memGames = memGames.filter(x=>x.id!==id); delete memStates[id]; } }
+async function localGetState(id){ return db ? await tx("states","readonly",s=>s.get(id)) : memStates[id]; }
+async function localPutState(v){ if(db) await tx("states","readwrite",s=>s.put(v)); else memStates[v.id]=v; }
+async function localDelState(id){ if(db) await tx("states","readwrite",s=>s.delete(id)); else delete memStates[id]; }
+async function localStateIds(){ return db ? await tx("states","readonly",s=>s.getAllKeys()) : Object.keys(memStates); }
 async function wipeAll(){ if(db){ await tx("games","readwrite",s=>s.clear()); await tx("states","readwrite",s=>s.clear()); } memGames=[]; memStates={}; }
+
+/* ================= Online library (api.php on your own website) =================
+   When Easy Arcade runs from your web hosting, games, artwork, settings and saves are kept there,
+   behind your password. Each device keeps a copy of what it has played so games start quickly. */
+const cloud = {available:false, setup:false, authed:false, lib:{}, free:null};
+const CHUNK = 2*1024*1024;
+const CLOUD_ID = /^[a-z0-9_-]{1,64}$/;
+const META_FIELDS = ["id","title","file","size","helper","engine","added","lastPlayed","plays","artFit","artV","artAt","hasArt","coreOpts"];
+async function api(action, o){
+  o = o || {};
+  const opt = {method:o.method||"GET", credentials:"same-origin", headers:{}};
+  if(opt.method==="POST") opt.headers["X-Easy-Arcade"]="1";
+  if(o.json!==undefined){ opt.headers["Content-Type"]="application/json"; opt.body=JSON.stringify(o.json); }
+  else if(o.body!==undefined){ opt.headers["Content-Type"]="application/octet-stream"; opt.body=o.body; }
+  const r = await fetch("api.php?action="+action+(o.query||""), opt);
+  let j = null; try{ j = await r.json(); }catch(e){}
+  if(!r.ok || !j || !j.ok){
+    if(r.status===401 && action!=="login"){ cloud.authed=false; renderCloud(); }
+    const err = new Error((j && j.error) || ("The website said "+r.status)); err.status=r.status; throw err;
+  }
+  return j;
+}
+async function cloudCheck(){
+  if(location.protocol==="file:") return;
+  try{
+    const r = await fetch("api.php?action=status", {credentials:"same-origin", cache:"no-store"});
+    const j = await r.json();
+    if(j && j.easyArcade){ cloud.available=true; cloud.setup=!!j.setup; cloud.authed=!!j.authed; cloud.free = j.free===undefined ? null : j.free; }
+  }catch(e){}   // GitHub Pages or a host without PHP: stay on this device only
+}
+async function cloudLoadLib(){
+  if(!cloud.authed) return;
+  try{ const j = await api("library"); const gs = j.library && j.library.games; cloud.lib = (gs && !Array.isArray(gs)) ? gs : {}; }catch(e){}
+}
+async function uploadFile(kind, id, blob, onProgress){
+  const parts = Math.max(1, Math.ceil(blob.size/CHUNK));
+  for(let i=0;i<parts;i++){
+    const piece = blob.slice(i*CHUNK, Math.min(blob.size,(i+1)*CHUNK));
+    for(let tries=1;;tries++){
+      try{ await api("upload", {method:"POST", body:piece, query:"&kind="+kind+"&id="+encodeURIComponent(id)+"&part="+i+"&parts="+parts}); break; }
+      catch(e){ if(tries>=3 || e.status===401 || e.status===413 || e.status===400) throw e; await new Promise(r=>setTimeout(r,800*tries)); }
+    }
+    if(onProgress) onProgress(Math.min(blob.size,(i+1)*CHUNK), blob.size);
+  }
+}
+async function downloadFile(kind, id, onProgress){
+  const r = await fetch("api.php?action=file&kind="+kind+"&id="+encodeURIComponent(id), {credentials:"same-origin"});
+  if(!r.ok) throw new Error("Download failed ("+r.status+")");
+  const total = +r.headers.get("content-length") || 0;
+  if(!r.body || !r.body.getReader) return await r.blob();
+  const rd = r.body.getReader(), chunks = []; let got = 0;
+  for(;;){ const {done,value} = await rd.read(); if(done) break; chunks.push(value); got+=value.length; if(onProgress && total) onProgress(got,total); }
+  return new Blob(chunks);
+}
+function metaOf(g){ const m={}; for(const k of META_FIELDS) if(g[k]!==undefined) m[k]=g[k]; m.hasArt = g.art ? true : !!g.hasArt; return m; }
+function isOnline(g){ return cloud.authed && g && (g.id in cloud.lib) && cloud.lib[g.id].hasRom; }
+const metaTimers = {};
+function cloudSaveMeta(g, now){
+  if(!isOnline(g)) return Promise.resolve();
+  clearTimeout(metaTimers[g.id]);
+  const send = ()=>{ const m=metaOf(g); cloud.lib[g.id]=Object.assign({}, cloud.lib[g.id], m); return api("meta",{method:"POST",json:{game:m}}).catch(()=>{}); };
+  if(now) return send();
+  metaTimers[g.id] = setTimeout(send, 700);
+  return Promise.resolve();
+}
+function cloudSyncArt(g){
+  if(!isOnline(g) || !g.art || g._artSent===g.artAt) return;
+  const at = g.artAt;
+  uploadFile("art", g.id, g.art).then(()=>{ g._artSent=at; g.hasArt=true; localPut(g).catch(()=>{}); cloudSaveMeta(g,true); }).catch(()=>{});
+}
+
+/* What the rest of the app uses */
+async function listGames(){
+  const local = await localGames();
+  if(!cloud.authed) return local;
+  await cloudLoadLib();
+  const byId = new Map(local.map(g=>[g.id,g])), out = [];
+  for(const id in cloud.lib){
+    const m = cloud.lib[id]; if(!m || !m.hasRom) continue;
+    const l = byId.get(id); byId.delete(id);
+    const useLocalArt = l && l.art && (!m.hasArt || (l.artAt||0) >= (m.artAt||0));
+    out.push(Object.assign({}, l||{}, m, {blob: l && l.blob, art: useLocalArt ? l.art : undefined, _artSent: l && l._artSent, online:true}));
+  }
+  for(const l of byId.values()) out.push(Object.assign({}, l, {online:false}));
+  return out;
+}
+async function saveGame(g){
+  const rec = Object.assign({}, g); delete rec.online;
+  await localPut(rec);
+  if(isOnline(g)){ cloudSaveMeta(g); cloudSyncArt(g); }
+}
+async function removeGame(id){
+  await localRemove(id);
+  if(cloud.authed && (id in cloud.lib)){ try{ await api("delete",{method:"POST",json:{id}}); delete cloud.lib[id]; }catch(e){ toast("Removed here, but couldn't remove it from your website"); } }
+}
+async function getState(id){
+  const l = await localGetState(id);
+  const m = cloud.authed && cloud.lib[id];
+  if(m && m.hasState && (!l || (m.stateAt||0) > (l.at||0)+2000)){
+    try{ const b = await downloadFile("state", id); const v = {id, data:new Uint8Array(await b.arrayBuffer()), at:m.stateAt||Date.now()}; await localPutState(v); return v; }
+    catch(e){ if(l) return l; throw e; }
+  }
+  return l;
+}
+async function putState(v){
+  await localPutState(v);
+  const g = games.find(x=>x.id===v.id);
+  if(isOnline(g)){
+    uploadFile("state", v.id, new Blob([v.data])).then(()=>{ const m=cloud.lib[v.id]; if(m){ m.hasState=true; m.stateAt=Date.now(); } })
+      .catch(()=>toast("Saved on this device — couldn't copy the save to your website", 3500));
+  }
+}
+async function delState(id){
+  await localDelState(id);
+  if(cloud.authed && cloud.lib[id] && cloud.lib[id].hasState){ try{ await api("delstate",{method:"POST",json:{id}}); cloud.lib[id].hasState=false; }catch(e){} }
+}
+async function stateIds(){
+  const ids = new Set(await localStateIds());
+  if(cloud.authed) for(const id in cloud.lib) if(cloud.lib[id].hasState) ids.add(id);
+  return [...ids];
+}
 
 /* ================= Helpers ================= */
 const $ = id => document.getElementById(id);
@@ -571,7 +699,7 @@ function sheet(html, onclick, onclose){
 /* Art: object-URL cache */
 const artUrls = new Map();
 function artUrl(g){
-  if(!g.art) return null;
+  if(!g.art) return (g.online && g.hasArt) ? "api.php?action=file&kind=art&id="+encodeURIComponent(g.id)+"&v="+(g.artAt||0) : null;
   const key = g.id+":"+(g.artAt||0);
   if(!artUrls.has(key)){ for(const [k,u] of artUrls) if(k.startsWith(g.id+":")){ URL.revokeObjectURL(u); artUrls.delete(k); } artUrls.set(key, URL.createObjectURL(g.art)); }
   return artUrls.get(key);
@@ -596,8 +724,11 @@ function show(v){
   if(!VIEWS.includes(v)) v="home";
   VIEWS.forEach(x=>$(x).classList.toggle("hidden", x!==v));
   if(v==="settings") enterSettings(); else leaveSettings();
+  if((v==="library"||v==="home") && cloud.authed && Date.now()-lastCloudRefresh > 4000){ lastCloudRefresh = Date.now(); refresh(); }   // pick up changes made on other devices
   window.scrollTo(0,0);
 }
+let lastCloudRefresh = 0;
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden && cloud.authed && $("player").classList.contains("hidden") && Date.now()-lastCloudRefresh > 4000){ lastCloudRefresh=Date.now(); refresh(); } });
 function go(v){ if(("#"+v)===location.hash || (v==="home" && !location.hash)) show(v); else location.hash = v==="home" ? "" : v; }
 window.addEventListener("hashchange", ()=>{ if($("player").classList.contains("hidden")) show(location.hash.slice(1)||"home"); });
 document.addEventListener("click", e=>{
@@ -688,7 +819,7 @@ function gameMenu(g){
     if(act==="art"){ s.remove(); artTarget=g; $("artInput").click(); }
     else if(act==="find"){ s.remove(); artFinder([g], true); }
     else if(act.startsWith("fit:")){ g.artFit = act.slice(4); await saveGame(g); s.remove(); refresh(); }
-    else if(act==="noart"){ delete g.art; g.artAt=Date.now(); await saveGame(g); s.remove(); refresh(); }
+    else if(act==="noart"){ delete g.art; g.hasArt=false; g.artAt=Date.now(); await saveGame(g); s.remove(); refresh(); }
     else if(act==="rename"){
       s.remove();
       const r = sheet('<h3>Rename game</h3><input type="text" id="rn" value="'+esc(g.title)+'" maxlength="60"><div class="opts"><button class="opt primary" data-act="ok">Save name</button></div>', async (a,s2)=>{
@@ -775,7 +906,8 @@ async function importFiles(files, agreedAlready){
   importing = true;
   if(zips.length){ setProgress(0, "Getting ready…", ""); await loadArtIndex(); }
   const total = [...zips,...imgs].reduce((a,f)=>a+f.size,0) || 1;
-  let done = 0, added = 0, replaced = 0, support = 0, arts = 0, bad = [], unmatched = [];
+  let done = 0, added = 0, replaced = 0, support = 0, arts = 0, bad = [], unmatched = [], uploaded = 0;
+  const toWeb = cloud.authed, share = toWeb ? 0.5 : 1;   // with the online library, half the bar is reading, half uploading
   const n = zips.length + imgs.length; let k = 0;
   try{
     for(const f of zips){
@@ -783,11 +915,11 @@ async function importFiles(files, agreedAlready){
       const label = (n>1 ? "Adding "+k+" of "+n : "Adding game")+"…";
       setProgress(done/total*100, label, f.name+" · "+mb(f.size));
       let buf;
-      try{ buf = await readWithProgress(f, b=>setProgress(Math.min(99,(done+b*0.9)/total*100), label)); }
+      try{ buf = await readWithProgress(f, b=>setProgress(Math.min(99,(done+b*share*0.9)/total*100), label)); }
       catch(err){ bad.push(f.name+" (couldn't be read)"); done+=f.size; continue; }
       const head = new Uint8Array(buf,0,Math.min(4,buf.byteLength));
       if(!(head[0]===0x50 && head[1]===0x4b)){ bad.push(f.name+" (not a valid zip)"); done+=f.size; continue; }
-      setProgress(Math.min(99,(done+f.size*0.95)/total*100), label, "Saving "+f.name+"…");
+      setProgress(Math.min(99,(done+f.size*share*0.95)/total*100), label, "Saving "+f.name+"…");
       const b = baseName(f.name), old = games.find(g=>g.id===b);
       const g = Object.assign({}, old||{}, {
         id:b, file:b+".zip", blob:new Blob([buf],{type:"application/zip"}), size:f.size,
@@ -796,6 +928,18 @@ async function importFiles(files, agreedAlready){
       });
       try{ await saveGame(g); old ? replaced++ : g.helper ? support++ : added++; if(!old) games.push(g); else Object.assign(old,g); }
       catch(err){ bad.push(f.name+" (not enough storage space)"); }
+      if(toWeb){
+        if(!CLOUD_ID.test(b)) bad.push(f.name+" (kept on this device only — rename it using only letters, numbers, - or _ to put it online)");
+        else {
+          const ulabel = (n>1 ? "Uploading "+k+" of "+n : "Uploading")+" to your website…";
+          try{
+            await uploadFile("rom", b, g.blob, (got)=>setProgress(Math.min(99,(done+f.size*0.5+got*0.5)/total*100), ulabel, f.name+" · "+mb(got)+" of "+mb(f.size)));
+            cloud.lib[b] = Object.assign({}, cloud.lib[b], metaOf(g), {hasRom:true, size:f.size});
+            await cloudSaveMeta(Object.assign({}, g), true);
+            uploaded++;
+          }catch(err){ bad.push(f.name+" (couldn't upload to your website: "+err.message+")"); }
+        }
+      }
       done += f.size;
     }
     for(const f of imgs){
@@ -812,6 +956,7 @@ async function importFiles(files, agreedAlready){
   await refresh();
   const parts = [];
   if(added) parts.push(added+" new game"+(added>1?"s":""));
+  if(toWeb && uploaded) parts.push(uploaded===added+replaced+support ? "all saved to your website ☁️" : uploaded+" saved to your website ☁️");
   if(replaced) parts.push(replaced+" updated");
   if(support) parts.push(support+" support file"+(support>1?"s":""));
   if(arts) parts.push(arts+" artwork"+(arts>1?"s":""));
@@ -914,6 +1059,7 @@ function renderSettings(){
   $("sKeysPanel").checked = settings.keysPanel;
   renderMap();
   storageInfo();
+  renderCloud();
 }
 $("sOnscreen").onchange = e=>{ settings.onscreen=e.target.checked; saveSettings(); };
 $("sLeft").onchange = e=>{ settings.leftHanded=e.target.checked; saveSettings(); };
@@ -1022,7 +1168,7 @@ $("persistBtn").onclick = async ()=>{
   storageInfo();
 };
 $("wipeBtn").onclick = ()=>{
-  sheet('<h3>Delete everything?</h3><p>This removes all games, artwork and saved progress from Easy Arcade on this device. It can\'t be undone.</p><div class="opts"><button class="opt danger" data-act="yes">Yes, delete everything</button><button class="opt" data-act="no">Cancel</button></div>',
+  sheet('<h3>Delete everything?</h3><p>This removes all games, artwork and saved progress from Easy Arcade on this device. It can\'t be undone.'+(cloud.authed?' Your online library on your website isn\'t affected.':'')+'</p><div class="opts"><button class="opt danger" data-act="yes">Yes, delete everything</button><button class="opt" data-act="no">Cancel</button></div>',
     async (a,s)=>{ s.remove(); if(a==="yes"){ await wipeAll(); await refresh(); storageInfo(); toast("Everything deleted"); } });
 };
 
@@ -1064,8 +1210,28 @@ async function launch(g, resume){
   const helpers = games.filter(x=>x.id!==g.id && (x.helper || (x.size||0) <= 3*1024*1024))
     .sort((a,b)=>(b.helper?1:0)-(a.helper?1:0))
     .filter(x=>{ if(x.helper) return true; if((x.size||0)>budget) return false; budget-=(x.size||0); return true; });
+  const need = [g, ...helpers].filter(x=>!x.blob && x.online);
+  if(need.length){
+    const ov = document.createElement("div"); ov.className="loading";
+    ov.innerHTML='<div class="spin">☁️</div><div id="dlTxt">Fetching from your website…</div>';
+    $("game-wrap").appendChild(ov);
+    for(const x of need){
+      try{
+        x.blob = await downloadFile("rom", x.id, (got,t)=>{ const el=$("dlTxt"); if(el) el.textContent="Fetching "+(x===g?x.title:x.file)+" from your website… "+Math.round(got/t*100)+"%"; });
+        await localPut(Object.assign({}, x, {online:undefined}));   // keep a copy on this device
+      }catch(err){
+        if(x===g){ ov.innerHTML='<div class="spin">😕</div><div>Couldn\'t fetch this game from your website.<br>Check your connection and try again.</div>'; return; }
+      }
+    }
+    ov.remove();
+  }
+  if(!g.blob){
+    const ov = document.createElement("div"); ov.className="loading";
+    ov.innerHTML='<div class="spin">😕</div><div>This game\'s file isn\'t on this device.<br>Sign in to your online library, or add the game again.</div>';
+    $("game-wrap").appendChild(ov); return;
+  }
   const ext = {};
-  for(const h of helpers){ ext["/"+h.file]=h.blob; ext["/home/web_user/retroarch/system/"+h.file]=h.blob; ext["/home/web_user/retroarch/system/fbneo/"+h.file]=h.blob; }
+  for(const h of helpers){ if(!h.blob) continue; ext["/"+h.file]=h.blob; ext["/home/web_user/retroarch/system/"+h.file]=h.blob; ext["/home/web_user/retroarch/system/fbneo/"+h.file]=h.blob; }
 
   window.EJS_player = "#game";
   window.EJS_core = g.engine || "fbneo";
@@ -1379,10 +1545,114 @@ $("pBack").onclick = ()=>{
   });
 };
 
+/* ================= Online library UI ================= */
+function renderCloud(){
+  const el = $("cloudBody"), hp = $("cloudPrompt");
+  if(!el) return;
+  if(!cloud.available){
+    el.innerHTML = '<p>Keep your games, artwork, settings and saves on your own website, so they appear on every device. '+
+      'This works when Easy Arcade runs from your own web hosting (it needs PHP, which most hosting has). It isn\'t available on this copy.</p>';
+    hp.classList.add("hidden"); return;
+  }
+  if(cloud.setup){
+    el.innerHTML = '<p>Your website can keep your whole library. First, choose a password so only you can see and play your games.</p><button class="small-btn" style="background:var(--pink)" data-cloud="setup">🔐 Set up my online library</button>';
+    hp.innerHTML = '<span class="mini" style="background:#2f6fe0">☁️</span><span>Set up your online library</span>'; hp.dataset.act="setup"; hp.classList.remove("hidden"); return;
+  }
+  if(!cloud.authed){
+    el.innerHTML = '<p>Your online library is locked. Sign in to see the games stored on your website.</p><button class="small-btn" style="background:var(--pink)" data-cloud="login">🔑 Sign in</button>';
+    hp.innerHTML = '<span class="mini" style="background:#2f6fe0">🔑</span><span>Sign in to your online library</span>'; hp.dataset.act="login"; hp.classList.remove("hidden"); return;
+  }
+  hp.classList.add("hidden");
+  const online = Object.values(cloud.lib).filter(m=>m && m.hasRom);
+  const size = online.reduce((a,m)=>a+(m.size||0),0);
+  const localOnly = games.filter(g=>!g.online && g.blob && CLOUD_ID.test(g.id));
+  el.innerHTML = '<p>✅ Signed in. <b>'+online.length+'</b> file'+(online.length===1?'':'s')+' on your website ('+mb(size)+')'+(cloud.free?', '+mb(cloud.free)+' free':'')+
+    '. New games you add are saved there automatically, and any device can play them after signing in.</p>'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+    (localOnly.length ? '<button class="small-btn" style="background:var(--pink)" data-cloud="push">⬆️ Copy '+localOnly.length+' game'+(localOnly.length>1?'s':'')+' from this device to your website</button>' : '')+
+    '<button class="small-btn" data-cloud="logout">🚪 Sign out on this device</button></div>';
+}
+document.addEventListener("click", e=>{
+  const b = e.target.closest("[data-cloud]"); if(b){ cloudAction(b.dataset.cloud); return; }
+  if(e.target.closest("#cloudPrompt")) cloudAction($("cloudPrompt").dataset.act);
+});
+function cloudAction(a){
+  if(a==="setup" || a==="login"){
+    const setup = a==="setup";
+    const s = sheet('<h3>'+(setup?'🔐 Choose a password':'🔑 Sign in')+'</h3>'+
+      '<p>'+(setup ? 'This keeps your online library private. You\'ll need it once on each device you use. Pick something you\'ll remember — at least 6 characters.'
+                   : 'Enter the password for your online library.')+'</p>'+
+      '<input type="password" id="pw1" placeholder="Password" autocomplete="'+(setup?'new-password':'current-password')+'">'+
+      (setup ? '<input type="password" id="pw2" placeholder="Type it again" autocomplete="new-password">' : '')+
+      '<p id="pwErr" style="color:#ff8a9a;display:none;margin:-4px 0 10px"></p>'+
+      '<div class="opts"><button class="opt primary" data-act="go"><span class="e">'+(setup?'✅':'🔓')+'</span>'+(setup?'Set password':'Sign in')+'</button><button class="opt" data-act="cancel">Cancel</button></div>',
+      async (act, s2, btn)=>{
+        if(act==="cancel"){ s2.remove(); return; }
+        const pw = s2.querySelector("#pw1").value, err = s2.querySelector("#pwErr");
+        const showErr = m=>{ err.textContent=m; err.style.display="block"; };
+        if(setup){
+          if(pw.length<6) return showErr("Please use at least 6 characters.");
+          if(pw!==s2.querySelector("#pw2").value) return showErr("The two passwords don't match.");
+        }
+        btn.disabled = true;
+        try{
+          await api(setup?"setup":"login", {method:"POST", json:{password:pw}});
+          s2.remove(); cloud.setup=false; cloud.authed=true;
+          await cloudCheck(); await refresh(); renderCloud();
+          toast(setup ? "Your online library is ready ☁️" : "Signed in ☁️");
+          const localOnly = games.filter(g=>!g.online && g.blob && CLOUD_ID.test(g.id));
+          if(localOnly.length) setTimeout(()=>offerPush(localOnly.length), 600);
+        }catch(e){ btn.disabled=false; showErr(e.message); }
+      });
+    const inp = s.querySelector("#pw1"); inp.focus();
+    s.addEventListener("keydown", ev=>{ if(ev.key==="Enter") s.querySelector('[data-act="go"]').click(); });
+  } else if(a==="logout"){
+    api("logout").catch(()=>{}).then(async ()=>{ cloud.authed=false; cloud.lib={}; await refresh(); renderCloud(); toast("Signed out on this device"); });
+  } else if(a==="push"){
+    pushLocalGames();
+  }
+}
+function offerPush(n){
+  sheet('<h3>⬆️ Copy your games to your website?</h3><p>This device has '+n+' game'+(n>1?'s':'')+' that aren\'t in your online library yet. Copy them now so your other devices can play them too?</p>'+
+    '<div class="opts"><button class="opt primary" data-act="yes"><span class="e">☁️</span>Yes, copy them</button><button class="opt" data-act="no">Not now</button></div>',
+    (a,s)=>{ s.remove(); if(a==="yes") pushLocalGames(); });
+}
+async function pushLocalGames(){
+  if(importing){ toast("Still busy — one moment"); return; }
+  const list = games.filter(g=>!g.online && g.blob && CLOUD_ID.test(g.id));
+  if(!list.length){ toast("Everything on this device is already online"); return; }
+  importing = true;
+  const total = list.reduce((a,g)=>a+(g.size||g.blob.size),0) || 1;
+  let done = 0, ok = 0, bad = [];
+  try{
+    for(let i=0;i<list.length;i++){
+      const g = list[i], label = "Copying "+(i+1)+" of "+list.length+" to your website…";
+      setProgress(done/total*100, label, g.title);
+      try{
+        await uploadFile("rom", g.id, g.blob, got=>setProgress(Math.min(99,(done+got)/total*100), label, g.title+" · "+mb(got)+" of "+mb(g.blob.size)));
+        cloud.lib[g.id] = Object.assign({}, cloud.lib[g.id], metaOf(g), {hasRom:true, size:g.blob.size});
+        g.online = true;
+        if(g.art){ try{ await uploadFile("art", g.id, g.art); g._artSent=g.artAt; g.hasArt=true; }catch(e){} }
+        await cloudSaveMeta(g, true);
+        const st = await localGetState(g.id);
+        if(st){ try{ await uploadFile("state", g.id, new Blob([st.data])); cloud.lib[g.id].hasState=true; cloud.lib[g.id].stateAt=st.at; }catch(e){} }
+        await localPut(Object.assign({}, g, {online:undefined}));
+        ok++;
+      }catch(e){ bad.push(g.title+" ("+e.message+")"); }
+      done += (g.size||g.blob.size);
+    }
+  } finally { importing = false; }
+  await refresh(); renderCloud();
+  finishProgress({title: ok ? "✅ Copied "+ok+" game"+(ok>1?"s":"")+" to your website ☁️" : "Nothing was copied", detail: bad.length ? "Couldn't copy: "+bad.join(", ") : "All done!"},
+    '<button class="small-btn" data-goto="library" style="background:var(--pink)">🕹️ Go to library</button><button class="small-btn">Close</button>');
+}
+
 /* ================= Start ================= */
 (async function(){
   db = await openDB();
+  await cloudCheck();
   await refresh();
+  renderCloud();
   show(location.hash.slice(1)||"home");
   let auto=null; try{ auto=sessionStorage.getItem("ea-autoplay"); sessionStorage.removeItem("ea-autoplay"); }catch(e){}
   if(auto){ const g=games.find(x=>x.id===auto); if(g){ toast("Trying "+ENGINES[g.engine].label+"…"); launch(g,false); } }
